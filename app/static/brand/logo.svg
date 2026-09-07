@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="220" viewBox="0 0 900 220" fill="none">
-  <title>Nuvio2Fusion — take your collections with you</title>
-  <rect width="900" height="220" rx="28" fill="#0D1117"/>
+  <title>NuvioExporter — move your collection setup</title>
+  <rect width="900" height="220" rx="28" fill="#202832"/>
   <g transform="translate(30 30) scale(.625)">
-    <rect width="256" height="256" rx="64" fill="#101820"/>
-    <rect x="43" y="45" width="108" height="135" rx="24" stroke="#A7A0EF" stroke-width="14"/>
-    <rect x="83" y="77" width="130" height="138" rx="25" fill="#B5EED2"/>
-    <path d="M111 146h70m-25-26 26 26-26 26" stroke="#143B2B" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect width="256" height="256" rx="64" fill="#202832"/>
+    <rect x="43" y="45" width="108" height="135" rx="24" stroke="#9CB5FF" stroke-width="14"/>
+    <rect x="83" y="77" width="130" height="138" rx="25" fill="#315FD5"/>
+    <path d="M111 146h70m-25-26 26 26-26 26" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
-  <text x="226" y="114" font-family="Arial,Helvetica,sans-serif" font-size="68" font-weight="700" letter-spacing="-2" fill="#EDF0F4">Nuvio<tspan fill="#B5EED2">2</tspan>Fusion</text>
-  <text x="230" y="154" font-family="Arial,Helvetica,sans-serif" font-size="19" letter-spacing="1.5" fill="#9AA7B8">TAKE YOUR COLLECTIONS WITH YOU</text>
+  <text x="226" y="114" font-family="Arial,Helvetica,sans-serif" font-size="68" font-weight="700" letter-spacing="-2" fill="#FFFFFF">Nuvio<tspan fill="#9CB5FF">Exporter</tspan></text>
+  <text x="230" y="154" font-family="Arial,Helvetica,sans-serif" font-size="19" letter-spacing="1.5" fill="#C0C7D1">MOVE YOUR COLLECTION SETUP</text>
 </svg>
