@@ -21,7 +21,7 @@ from urllib.parse import parse_qsl
 
 ROOT = Path(__file__).parent
 MAX_REQUEST_BYTES = 10 * 1024 * 1024
-VERSION = '3.0.0'
+VERSION = '3.0.1'
 APP_NAME = 'NuvioExporter'
 app = FastAPI(title=APP_NAME, version=VERSION,
               description='Convert Nuvio collections for Fusion or import their catalog setup into Remux.',
