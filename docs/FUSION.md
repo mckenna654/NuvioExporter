@@ -1,6 +1,6 @@
 # Nuvio → Fusion conversion and compatibility addon
 
-Reviewed 2026-09-01. Nuvio2Fusion transfers a client layout and retains catalog references. Ordinary unfiltered movie/series references remain direct; the optional persistent addon serves mixed catalogs and separate genre queries in forms that survive Fusion's widget importer.
+Reviewed 2026-09-01. NuvioExporter transfers a client layout and retains catalog references. Ordinary unfiltered movie/series references remain direct; the optional persistent addon serves mixed catalogs and separate genre queries in forms that survive Fusion's widget importer.
 
 ## Evidence
 
