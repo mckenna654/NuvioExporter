@@ -95,7 +95,7 @@ class JsonFetcher:
                 if parts.query:
                     target += '?' + parts.query
                 conn.request('GET', target, headers={'Accept': 'application/json',
-                             'Accept-Encoding': 'identity', 'User-Agent': 'Nuvio2Fusion/2.1'})
+                             'Accept-Encoding': 'identity', 'User-Agent': 'NuvioExporter/3.0'})
                 response = conn.getresponse()
                 if response.status in {301, 302, 303, 307, 308}:
                     location = response.getheader('Location')
