@@ -1,4 +1,4 @@
-"""Nuvio2Fusion: local collection-layout conversion."""
+"""NuvioExporter: local collection-layout conversion."""
 from __future__ import annotations
 
 import json
@@ -16,16 +16,19 @@ from fastapi.exceptions import RequestValidationError
 from app.fusion import convert_to_fusion
 from app.bridge import BridgeError, BridgePlan, BridgeService, PAGE_SIZE, ProfileStore
 from app.upstream import UpstreamError
+from app.remux import RemuxService, RemuxError
 from urllib.parse import parse_qsl
 
 ROOT = Path(__file__).parent
 MAX_REQUEST_BYTES = 10 * 1024 * 1024
-VERSION = '2.1.1'
-app = FastAPI(title='Nuvio2Fusion', version=VERSION,
-              description='Convert Nuvio collections into Fusion widget JSON.',
+VERSION = '3.0.0'
+APP_NAME = 'NuvioExporter'
+app = FastAPI(title=APP_NAME, version=VERSION,
+              description='Convert Nuvio collections for Fusion or import their catalog setup into Remux.',
               docs_url=None, redoc_url=None)
 app.mount('/static', StaticFiles(directory=ROOT / 'static'), name='static')
 app.state.bridge = BridgeService(ProfileStore(os.getenv('NUVIO2FUSION_DATA_DIR', str(ROOT.parent / 'data'))))
+app.state.remux = RemuxService(app.state.bridge.store)
 
 
 class RequestBoundary:
@@ -92,6 +95,42 @@ class FusionRequest(BaseModel):
     omit_empty_folders: bool = False
 
 
+class RemuxPreviewRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    export_data: Any
+    addon_urls: dict[str, str] = Field(default_factory=dict)
+    bridge_url: str | None = None
+    server_url: str
+    api_key: str = Field(repr=False, min_length=1, max_length=4096)
+    setup_name: str = Field(default='My Nuvio setup', min_length=1, max_length=100)
+
+
+class RemuxImportRequest(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    preview_token: str
+    api_key: str = Field(repr=False, min_length=1, max_length=4096)
+
+
+@app.post('/api/remux/preview')
+def remux_preview(request: RemuxPreviewRequest, http_request: Request):
+    try:
+        return http_request.app.state.remux.preview(**request.model_dump())
+    except RemuxError as exc:
+        raise HTTPException(400, str(exc)) from None
+    except (ValueError, TypeError, AttributeError, KeyError, RecursionError):
+        raise HTTPException(400, 'Invalid Nuvio setup or Remux response. Check the source JSON, addon URLs and server version.') from None
+
+
+@app.post('/api/remux/import')
+def remux_import(request: RemuxImportRequest, http_request: Request):
+    try:
+        return http_request.app.state.remux.apply(request.preview_token, request.api_key)
+    except RemuxError as exc:
+        raise HTTPException(409, str(exc)) from None
+    except (ValueError, TypeError, AttributeError, KeyError, RecursionError):
+        raise HTTPException(502, 'Unexpected Remux response. Some changes may have applied; preview again before retrying.') from None
+
+
 @app.get('/')
 async def index():
     return FileResponse(ROOT / 'templates' / 'index.html')
@@ -99,7 +138,7 @@ async def index():
 
 @app.get('/api/health')
 async def health():
-    return {'status': 'ok', 'app': 'Nuvio2Fusion', 'version': VERSION}
+    return {'status': 'ok', 'app': APP_NAME, 'version': VERSION}
 
 
 @app.get('/api/bridge/settings')
