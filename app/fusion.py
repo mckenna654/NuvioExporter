@@ -365,7 +365,7 @@ class FusionConversion:
         bridge_info = self.bridge.finish() if can_export and self.bridge else None
         if bridge_info:
             self.required[bridge_info['manifestUrl']] = None
-            warnings.append(f'{bridge_info["sourceReferences"]} catalog references use the Nuvio2Fusion compatibility addon for mixed media or separate genre filters. Keep this service running at the exported address and preserve its appdata. Movie/series order is preserved within each mixed feed; their original interleaving is separated. Original addon URLs are saved privately on this server.')
+            warnings.append(f'{bridge_info["sourceReferences"]} catalog references use the NuvioExporter compatibility addon for mixed media or separate genre filters. Keep this service running at the exported address and preserve its appdata. Movie/series order is preserved within each mixed feed; their original interleaving is separated. Original addon URLs are saved privately on this server.')
         complete = can_export and counts['unsupported'] == 0 and not self.issues and self.skipped_widgets == 0
         return {'success': True, 'fusionConfig': {'exportType': 'fusionWidgets', 'exportVersion': 1,
                     'requiredAddons': list(self.required), 'widgets': widgets} if can_export else None,
