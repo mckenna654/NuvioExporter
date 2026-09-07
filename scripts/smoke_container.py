@@ -24,7 +24,7 @@ def check(base):
             if time.monotonic() >= deadline:
                 raise RuntimeError('Container did not become ready within 45 seconds.') from None
             time.sleep(1)
-    assert health['status'] == 'ok' and health['app'] == 'Nuvio2Fusion'
+    assert health['status'] == 'ok' and health['app'] == 'NuvioExporter'
     original = request('/api/presets/nuvio')['rawData']
     result = request('/api/fusion/convert', {'export_data': original})
     assert result['report']['canExport']
@@ -32,7 +32,7 @@ def check(base):
     assert result['report']['counts']['unsupported'] == 0
     assert result['fusionConfig']['requiredAddons']
     with urllib.request.urlopen(base + '/', timeout=3) as response:
-        assert b'Nuvio2Fusion' in response.read()
+        assert b'NuvioExporter' in response.read()
     print(f"Container smoke test passed: version {health['version']}; "
           f"{result['report']['counts']['preserved']} example sources converted.")
 
