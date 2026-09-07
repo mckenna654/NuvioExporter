@@ -1,4 +1,4 @@
-name: Verify & publish Nuvio2Fusion
+name: Verify & publish NuvioExporter
 
 on:
   push:
@@ -41,7 +41,7 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - uses: actions/checkout@v4
@@ -57,15 +57,15 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository }}
+          images: ghcr.io/mckenna654/nuvio2fusion
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
           labels: |
-            org.opencontainers.image.title=Nuvio2Fusion
-            org.opencontainers.image.description=Nuvio collections converter and catalog compatibility addon
+            org.opencontainers.image.title=NuvioExporter
+            org.opencontainers.image.description=Nuvio collection transfer for Fusion and Remux
       - name: Build and publish Linux images
         id: build
         uses: docker/build-push-action@v6
@@ -79,7 +79,7 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Verify the published container starts and converts
         env:
-          RELEASE_IMAGE: ghcr.io/${{ github.repository }}@${{ steps.build.outputs.digest }}
+          RELEASE_IMAGE: ghcr.io/mckenna654/nuvio2fusion@${{ steps.build.outputs.digest }}
         run: |
           docker compose -f docker-compose.release.yml config --quiet
           mkdir -p "$RUNNER_TEMP/nuvio2fusion-data"
@@ -91,6 +91,12 @@ jobs:
           docker run --detach --name nuvio2fusion-smoke --publish 127.0.0.1:7088:7088 --volume "$RUNNER_TEMP/nuvio2fusion-data:/data" "$RELEASE_IMAGE"
           python scripts/smoke_container.py http://127.0.0.1:7088
           python scripts/smoke_bridge.py verify http://127.0.0.1:7088 "$RUNNER_TEMP/nuvio2fusion-profile.json"
+      - name: Attach installation files to the release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$GITHUB_REF_NAME" unraid-template.xml docker-compose.release.yml --clobber
       - name: Container smoke-test logs and cleanup
         if: always()
         run: |
