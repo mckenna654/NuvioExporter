@@ -76,7 +76,8 @@ class BridgeTests(unittest.TestCase):
         self.assertNotIn('PRIVATE', json.dumps(original_manifest))
         self.assertNotIn('private-config', json.dumps(original_manifest))
         self.assertEqual(self.profile()[1], token)
-        self.assertEqual(os.stat(Path(self.temp.name) / 'bridge.sqlite3').st_mode & 0o777, 0o600)
+        if os.name != 'nt':  # Windows permissions use ACLs rather than POSIX mode bits.
+            self.assertEqual(os.stat(Path(self.temp.name) / 'bridge.sqlite3').st_mode & 0o777, 0o600)
 
     def test_fixed_type_profile_preserves_a_separate_genre_query(self):
         plan = self.plan()
