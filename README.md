@@ -9,8 +9,8 @@
 
 <p align="center">
   <a href="https://github.com/mckenna654/NuvioExporter/actions/workflows/docker-publish.yml"><img src="https://github.com/mckenna654/NuvioExporter/actions/workflows/docker-publish.yml/badge.svg" alt="Build status"></a>
-  <a href="https://github.com/mckenna654/NuvioExporter/releases/latest"><img src="https://img.shields.io/github/v/release/mckenna654/nuvio2fusion?display_name=tag&sort=semver" alt="Latest release"></a>
-  <a href="https://github.com/mckenna654/nuvio2fusion/pkgs/container/nuvio2fusion"><img src="https://img.shields.io/badge/container-ghcr.io-2496ED?logo=docker&logoColor=white" alt="Container image on GitHub Container Registry"></a>
+  <a href="https://github.com/mckenna654/NuvioExporter/releases/latest"><img src="https://img.shields.io/github/v/release/mckenna654/NuvioExporter?display_name=tag&sort=semver" alt="Latest release"></a>
+  <a href="https://github.com/mckenna654/NuvioExporter/pkgs/container/nuvio2fusion"><img src="https://img.shields.io/badge/container-ghcr.io-2496ED?logo=docker&logoColor=white" alt="Container image on GitHub Container Registry"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-b5eed2" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/Python-3.11%2B-a7a0ef" alt="Python 3.11 or later">
   <img src="https://img.shields.io/badge/platform-linux%2Famd64%20%7C%20arm64-8bd5ca" alt="Linux amd64 and arm64">
@@ -40,7 +40,7 @@ NuvioExporter preserves the layout and references to your original catalog sourc
 
 ## Quick start
 
-**Installing on Unraid?** Use the [Unraid installation guide](docs/UNRAID.md) and the [v3.0.0 release downloads](https://github.com/mckenna654/NuvioExporter/releases/tag/v3.0.0). The public image is `ghcr.io/mckenna654/nuvio2fusion:3.0.0`; no registry login is needed. **Compatibility mode requires an appdata path mapped to `/data`.**
+**Installing on Unraid?** Use the [Unraid installation guide](docs/UNRAID.md) and the [v3.0.1 release downloads](https://github.com/mckenna654/NuvioExporter/releases/tag/v3.0.1). The public image is `ghcr.io/mckenna654/nuvio2fusion:3.0.1`; no registry login is needed. **Compatibility mode requires an appdata path mapped to `/data`.**
 
 ### Run with Python
 
@@ -48,7 +48,7 @@ Requires Python 3.11 or later. Node.js is only needed for development checks, no
 
 ```sh
 git clone https://github.com/mckenna654/NuvioExporter.git
-cd nuvio2fusion
+cd NuvioExporter
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python run.py
@@ -77,7 +77,7 @@ To update a local build, pull the repository changes and run `docker compose up 
 
 ### Use the published container
 
-Published images are available from [GitHub Container Registry](https://github.com/mckenna654/nuvio2fusion/pkgs/container/nuvio2fusion). For the pinned release:
+Published images are available from [GitHub Container Registry](https://github.com/mckenna654/NuvioExporter/pkgs/container/nuvio2fusion). For the pinned release:
 
 ```sh
 docker run -d \
@@ -85,7 +85,7 @@ docker run -d \
   --restart unless-stopped \
   -p 127.0.0.1:7088:7088 \
   -v nuvio2fusion-data:/data \
-  ghcr.io/mckenna654/nuvio2fusion:3.0.0
+  ghcr.io/mckenna654/nuvio2fusion:3.0.1
 ```
 
 `latest` follows successful builds of `main`; `sha-<commit>` identifies a particular build. Version tags are generated when a matching `v<version>` Git tag is published. Builds target Linux `amd64` and `arm64`. Check [Actions](https://github.com/mckenna654/NuvioExporter/actions) before assuming a particular image tag exists.
