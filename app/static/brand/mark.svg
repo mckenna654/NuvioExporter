@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" fill="none">
-  <title>Nuvio2Fusion collection transfer mark</title>
-  <rect width="256" height="256" rx="64" fill="#101820"/>
-  <rect x="43" y="45" width="108" height="135" rx="24" stroke="#A7A0EF" stroke-width="14"/>
-  <rect x="83" y="77" width="130" height="138" rx="25" fill="#B5EED2"/>
-  <path d="M111 146h70m-25-26 26 26-26 26" stroke="#143B2B" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <title>NuvioExporter collection transfer mark</title>
+  <rect width="256" height="256" rx="64" fill="#202832"/>
+  <rect x="43" y="45" width="108" height="135" rx="24" stroke="#9CB5FF" stroke-width="14"/>
+  <rect x="83" y="77" width="130" height="138" rx="25" fill="#315FD5"/>
+  <path d="M111 146h70m-25-26 26 26-26 26" stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
