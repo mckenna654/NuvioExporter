@@ -3,6 +3,8 @@ const $ = id => document.getElementById(id);
 let result = null;
 let exampleData = null;
 let generation = 0;
+let remuxResult = null;
+let importing = false;
 const mappingInputs = new Map();
 const addonChoices = new Map();
 
@@ -15,6 +17,8 @@ function element(tag, text, className) {
 function invalidate() {
   generation++;
   result = null;
+  remuxResult = null;
+  $('remuxResults').hidden = true;
   $('results').hidden = true;
   $('emptyState').hidden = false;
   $('resultBadge').textContent = 'AWAITING INPUT';
@@ -24,7 +28,7 @@ function clearMappings() {
   mappingInputs.clear();
   $('missingMappings').replaceChildren();
   $('missingAddonNotice').hidden = true;
-  $('convertButton').textContent = 'Convert to Fusion →';
+  destinationMode();
 }
 async function readSource() {
   if (exampleData !== null) return exampleData;
@@ -131,6 +135,17 @@ function inputMode() {
   $('fileSource').hidden = $('inputMode').value !== 'file';
   $('pasteSource').hidden = $('inputMode').value !== 'paste';
   $('bridgeOptions').hidden = !$('useBridge').checked;
+  destinationMode();
+}
+function destinationMode() {
+  const remux = $('destination').value === 'remux';
+  $('remuxConnection').hidden = !remux;
+  $('convertButton').textContent = remux ? 'Preview Remux import →' : 'Convert to Fusion →';
+  $('destinationHint').textContent = remux ? 'Create catalog collections in Remux. Reimport later to update the same setup.' : 'Download a widget file to import into Fusion.';
+  $('omitEmptyFolders').disabled = remux;
+  $('remuxUrl').required = remux;
+  $('remuxKey').required = remux;
+  $('setupName').required = remux;
 }
 async function api(path, body) {
   const response = await fetch(path, body ? {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)} : {});
@@ -152,6 +167,7 @@ $('fusionForm').addEventListener('input', event => {
 });
 $('fusionForm').addEventListener('submit', async event => {
   event.preventDefault();
+  if (importing) return;
   invalidate();
   const requestGeneration = generation;
   $('convertButton').disabled = true;
@@ -175,7 +191,17 @@ $('fusionForm').addEventListener('submit', async event => {
     }
     for (const [id, input] of mappingInputs) if (input.value.trim()) mappings[id] = input.value.trim();
     const bridgeUrl = $('bridgeUrl').value.trim();
-    if ($('useBridge').checked && !bridgeUrl) throw new Error('Enter the Nuvio2Fusion address that your Fusion devices can reach.');
+    if ($('useBridge').checked && !bridgeUrl) throw new Error('Enter the NuvioExporter address reachable from your destination.');
+    if ($('destination').value === 'remux') {
+      const data = await api('/api/remux/preview', {export_data: raw, addon_urls: mappings,
+        bridge_url: $('useBridge').checked ? bridgeUrl : null, server_url: $('remuxUrl').value.trim(),
+        api_key: $('remuxKey').value.trim(), setup_name: $('setupName').value.trim()});
+      if (requestGeneration !== generation) return;
+      remuxResult = data;
+      renderRemux();
+      $('inputStatus').textContent = 'Preview ready. Review the changes before importing into Remux.';
+      return;
+    }
     const data = await api('/api/fusion/convert', {export_data: raw, addon_urls: mappings,
       bridge_url: $('useBridge').checked ? bridgeUrl : null, omit_empty_folders: $('omitEmptyFolders').checked});
     if (requestGeneration !== generation) return;
@@ -202,7 +228,7 @@ for (const button of document.querySelectorAll('[data-preset]')) button.addEvent
     $('sourceFile').value = '';
     inputMode();
     updateAddonChoices(exampleData);
-    $('inputStatus').textContent = 'Sanitized example loaded. Click Convert to Fusion. Example addon URLs are not live.';
+    $('inputStatus').textContent = 'Sanitized example loaded. Example addon URLs are not live; replace them before using Remux.';
   } catch (err) { if (requestGeneration === generation) showError(err.message); }
 });
 function render() {
@@ -220,7 +246,7 @@ function render() {
   $('resultSummary').textContent = `${report.inputFormat} → Fusion widget v1 · ${report.requiredAddonCount} required addons · ${report.issues.length} layout issues.`;
   $('bridgeResult').hidden = !result.bridge;
   $('bridgeManifest').value = result.bridge?.manifestUrl || '';
-  if (result.bridge) $('bridgeSummary').textContent = `${result.bridge.sourceReferences} original catalog references are retained through ${result.bridge.catalogs} compatible movie/series feeds. Keep this Nuvio2Fusion service running; ordinary unfiltered catalogs still use their original addons directly.`;
+  if (result.bridge) $('bridgeSummary').textContent = `${result.bridge.sourceReferences} original catalog references are retained through ${result.bridge.catalogs} compatible movie/series feeds. Keep this NuvioExporter service running; ordinary unfiltered catalogs still use their original addons directly.`;
   $('coverage').textContent = !report.canExport ? report.exportBlockReason : report.complete
     ? 'All source references and supported layout fields were carried across. Live addon availability and import into your Fusion version still need checking.'
     : `${report.counts.unsupported} sources omitted; ${report.omittedEmptyFolders || 0} empty folders hidden; ${report.emptyFolders - (report.omittedEmptyFolders || 0)} empty folders retained; ${report.skippedWidgets} widgets omitted. Review the issues below. The download is marked partial.`;
@@ -279,3 +305,53 @@ $('bridgeUrl').value = window.location.origin;
 api('/api/bridge/settings').then(settings => {
   if (settings.publicUrl && $('bridgeUrl').value === window.location.origin) $('bridgeUrl').value = settings.publicUrl;
 }).catch(() => {});
+
+function renderRemux() {
+  const r = remuxResult.report;
+  $('remuxResults').hidden = false;
+  $('emptyState').hidden = true;
+  $('resultBadge').textContent = remuxResult.canImport ? 'READY TO REVIEW' : 'NO USABLE SOURCES';
+  $('remuxStats').replaceChildren();
+  for (const [number, label] of [[r.groups, 'Groups'], [r.folders, 'Collections'], [r.kept, 'Sources kept'], [r.omitted, 'Sources omitted']]) {
+    const stat = element('div', undefined, 'stat');
+    stat.append(element('strong', number), element('span', label));
+    $('remuxStats').append(stat);
+  }
+  const install = remuxResult.addons.filter(a => a.action === 'install').length;
+  $('remuxSummary').textContent = `${remuxResult.setupName} → ${remuxResult.serverUrl}. ${install} catalog addons to install; ${remuxResult.addons.length - install} to reuse. ${remuxResult.usesBridge ? 'Keep NuvioExporter running for compatibility feeds. ' : ''}Preview expires after 15 minutes.`;
+  $('remuxActions').replaceChildren(...remuxResult.actions.map(a => {
+    const row = element('tr'); row.append(element('td', a.name), element('td', `${a.action} ${a.kind}`)); return row;
+  }));
+  $('remuxWarnings').replaceChildren(...r.warnings.map(w => element('li', w)));
+  $('remuxSources').replaceChildren(...r.items.map(s => element('li', `${s.name}: ${s.status} — ${s.reason}`)));
+  $('importRemux').disabled = !remuxResult.canImport;
+  $('remuxProgress').textContent = 'Preview complete. No changes have been made to Remux.';
+}
+$('importRemux').addEventListener('click', async () => {
+  if (importing || !remuxResult?.canImport) return;
+  importing = true;
+  const token = remuxResult.previewToken;
+  const disabled = [...$('fusionForm').querySelectorAll('input,select,textarea,button')].map(el => [el, el.disabled]);
+  disabled.forEach(([el]) => { el.disabled = true; });
+  $('importRemux').disabled = true;
+  $('remuxProgress').textContent = 'Importing your setup… Keep this page open. Large setups can take several minutes.';
+  try {
+    const outcome = await api('/api/remux/import', {preview_token: token, api_key: $('remuxKey').value.trim()});
+    remuxResult.outcome = outcome;
+    remuxResult.canImport = false;
+    $('remuxProgress').textContent = outcome.message;
+    $('resultBadge').textContent = outcome.success ? 'SETUP IMPORTED' : 'IMPORT NEEDS ATTENTION';
+    $('remuxKey').value = '';
+  } catch (err) {
+    $('remuxProgress').textContent = `${err.message} Some changes may have applied. Preview again before retrying.`;
+  } finally {
+    importing = false;
+    disabled.forEach(([el, value]) => { el.disabled = value; });
+    $('importRemux').disabled = true;
+  }
+});
+$('downloadRemuxReport').addEventListener('click', () => {
+  if (remuxResult) download({report: remuxResult.report, actions: remuxResult.actions, addons: remuxResult.addons,
+    outcome: remuxResult.outcome}, 'remux-import-report.json');
+});
+destinationMode();
