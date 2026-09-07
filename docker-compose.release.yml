@@ -3,7 +3,7 @@
 # to your server's LAN address (or 0.0.0.0 to listen on all interfaces).
 services:
   nuvio2fusion:
-    image: ghcr.io/mckenna654/nuvio2fusion:3.0.0
+    image: ghcr.io/mckenna654/nuvio2fusion:3.0.1
     restart: unless-stopped
     volumes:
       - ./data:/data
