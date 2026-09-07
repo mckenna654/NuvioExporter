@@ -44,7 +44,7 @@ def public_base_url(value):
     p = urlsplit(value)
     if (p.scheme not in {'http', 'https'} or not p.hostname or p.username or
             p.password or p.query or p.fragment or any(ord(c) < 33 for c in value)):
-        raise ValueError('Use the HTTP(S) address of Nuvio2Fusion reachable from your Fusion devices.')
+        raise ValueError('Use the HTTP(S) address of NuvioExporter reachable from your Fusion devices.')
     p.port
     return value
 
@@ -197,8 +197,8 @@ class BridgeService:
                      'extra': [{'name': 'skip', 'isRequired': False}]}
                     for s in profile['sources'] for typ in s.get('outputTypes', MEDIA_TYPES)]
         return {'id': 'dev.nuvio2fusion.' + hashlib.sha256(token.encode()).hexdigest()[:12],
-                'name': 'Nuvio2Fusion compatibility', 'version': '2.1.1',
-                'description': 'Original catalog queries adapted for Fusion. Keep Nuvio2Fusion and the original addons available.',
+                'name': 'NuvioExporter compatibility', 'version': '3.0.0',
+                'description': 'Original catalog queries adapted for Fusion. Keep NuvioExporter and the original addons available.',
                 'resources': ['catalog'], 'types': list(MEDIA_TYPES), 'catalogs': catalogs}
 
     def _state(self, source):
