@@ -9,7 +9,7 @@ class ApiTests(unittest.TestCase):
         self.client = TestClient(app)
 
     def test_health_and_local_assets(self):
-        self.assertEqual(self.client.get('/api/health').json(), {'status': 'ok', 'app': 'Nuvio2Fusion', 'version': '2.1.1'})
+        self.assertEqual(self.client.get('/api/health').json(), {'status': 'ok', 'app': 'NuvioExporter', 'version': '3.0.0'})
         page = self.client.get('/')
         self.assertEqual(page.status_code, 200)
         self.assertIn("script-src 'self'", page.headers['Content-Security-Policy'])
@@ -41,6 +41,7 @@ class ApiTests(unittest.TestCase):
     def test_layout_conversion_and_fixed_compatibility_routes_are_exposed(self):
         paths = set(self.client.get('/openapi.json').json()['paths'])
         self.assertEqual(paths, {'/', '/api/health', '/api/presets/{name}', '/api/fusion/convert',
+                                '/api/remux/preview', '/api/remux/import',
                                 '/api/bridge/settings', '/bridge/{token}/manifest.json',
                                 '/bridge/{token}/catalog/{typ}/{cid}.json',
                                 '/bridge/{token}/catalog/{typ}/{cid}/{path_extra}.json'})
