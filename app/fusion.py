@@ -79,7 +79,7 @@ class FusionConversion:
         if prefix and not ident.startswith(prefix):
             ident = prefix + ident if ident else ''
         if not ident or ident in self.ids:
-            ident = prefix + str(uuid.uuid5(uuid.NAMESPACE_URL, 'nuvio2fusion/fusion/' + path))
+            ident = prefix + str(uuid.uuid5(uuid.NAMESPACE_URL, 'nuvioexporter/fusion/' + path))
             self.issue(path, 'generated_id', 'A missing or duplicate ID was replaced with a stable unique ID.')
         self.ids.add(ident)
         return ident

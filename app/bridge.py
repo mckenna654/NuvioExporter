@@ -20,6 +20,7 @@ from collections import OrderedDict
 from contextlib import closing
 from urllib.parse import parse_qsl, quote, unquote, urlencode, urlsplit, urlunsplit
 
+from app import VERSION
 from app.upstream import JsonFetcher, UpstreamError
 
 
@@ -186,7 +187,7 @@ class CatalogState:
 class BridgeService:
     def __init__(self, store, fetch=None):
         self.store = store
-        self.fetch = fetch or JsonFetcher(allow_private=os.getenv('NUVIO2FUSION_ALLOW_PRIVATE_UPSTREAM') == '1')
+        self.fetch = fetch or JsonFetcher(allow_private=os.getenv('NUVIOEXPORTER_ALLOW_PRIVATE_UPSTREAM') == '1')
         self.states = OrderedDict()
         self.cache_lock = threading.Lock()
 
@@ -196,8 +197,8 @@ class BridgeService:
                      'name': s['name'] + (' · Movies' if typ == 'movie' else ' · Series'),
                      'extra': [{'name': 'skip', 'isRequired': False}]}
                     for s in profile['sources'] for typ in s.get('outputTypes', MEDIA_TYPES)]
-        return {'id': 'dev.nuvio2fusion.' + hashlib.sha256(token.encode()).hexdigest()[:12],
-                'name': 'NuvioExporter compatibility', 'version': '3.0.1',
+        return {'id': 'dev.nuvioexporter.' + hashlib.sha256(token.encode()).hexdigest()[:12],
+                'name': 'NuvioExporter compatibility', 'version': VERSION,
                 'description': 'Original catalog queries adapted for Fusion. Keep NuvioExporter and the original addons available.',
                 'resources': ['catalog'], 'types': list(MEDIA_TYPES), 'catalogs': catalogs}
 
@@ -279,7 +280,7 @@ class BridgeService:
                 raise UpstreamError('More upstream pages are needed for this media type. Retry to continue scanning; the catalog was not treated as empty.')
             result = {'metas': copy.deepcopy(state.items[typ][skip:target])}
             if state.unknown_items:
-                result['nuvio2fusionWarning'] = f'{state.unknown_items} items have no supported movie/series type or ID.'
+                result['nuvioexporterWarning'] = f'{state.unknown_items} items have no supported movie/series type or ID.'
             return result
         finally:
             state.lock.release()

@@ -1,11 +1,11 @@
-# Prebuilt release image; no checkout, build or persistent volume is needed.
-# Localhost is the safe default. For a trusted LAN, set NUVIO2FUSION_BIND_IP
+# Prebuilt release image; no checkout or build is needed.
+# Localhost is the safe default. For a trusted LAN, set NUVIOEXPORTER_BIND_IP
 # to your server's LAN address (or 0.0.0.0 to listen on all interfaces).
 services:
-  nuvio2fusion:
-    image: ghcr.io/mckenna654/nuvio2fusion:3.0.1
+  nuvioexporter:
+    image: ghcr.io/mckenna654/nuvioexporter:3.1.0
     restart: unless-stopped
     volumes:
       - ./data:/data
     ports:
-      - "${NUVIO2FUSION_BIND_IP:-127.0.0.1}:${NUVIO2FUSION_PORT:-7088}:7088"
+      - "${NUVIOEXPORTER_BIND_IP:-127.0.0.1}:${NUVIOEXPORTER_PORT:-7088}:7088"

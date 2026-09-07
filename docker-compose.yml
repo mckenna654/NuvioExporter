@@ -1,7 +1,7 @@
 services:
-  nuvio2fusion:
+  nuvioexporter:
     build: .
-    image: nuvio2fusion:local
+    image: nuvioexporter:local
     restart: unless-stopped
     volumes:
       - ./data:/data

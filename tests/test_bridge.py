@@ -70,6 +70,8 @@ class BridgeTests(unittest.TestCase):
     def test_links_and_manifests_survive_fresh_store_and_process_state(self):
         service, token, cid = self.profile()
         original_manifest = service.manifest(token)
+        self.assertTrue(original_manifest['id'].startswith('dev.nuvioexporter.'))
+        self.assertEqual(original_manifest['version'], '3.1.0')
         reloaded = BridgeService(ProfileStore(self.temp.name), lambda _: {'metas': []})
         self.assertEqual(reloaded.manifest(token), original_manifest)
         self.assertEqual(reloaded.catalog(token, 'movie', cid), {'metas': []})
@@ -155,7 +157,7 @@ class BridgeTests(unittest.TestCase):
         service, token, cid = self.profile(lambda _: next(pages))
         result = service.catalog(token, 'series', cid)
         self.assertEqual(result['metas'], [{'id': 'y', 'type': 'series'}])
-        self.assertIn('1 items', result['nuvio2fusionWarning'])
+        self.assertIn('1 items', result['nuvioexporterWarning'])
 
     def test_limits_fail_loudly_instead_of_truncating_a_catalog(self):
         service, token, cid = self.profile(lambda _: {'metas': [{'id': '1', 'type': 'movie'}]})

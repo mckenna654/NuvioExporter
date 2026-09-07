@@ -10,7 +10,7 @@
 <p align="center">
   <a href="https://github.com/mckenna654/NuvioExporter/actions/workflows/docker-publish.yml"><img src="https://github.com/mckenna654/NuvioExporter/actions/workflows/docker-publish.yml/badge.svg" alt="Build status"></a>
   <a href="https://github.com/mckenna654/NuvioExporter/releases/latest"><img src="https://img.shields.io/github/v/release/mckenna654/NuvioExporter?display_name=tag&sort=semver" alt="Latest release"></a>
-  <a href="https://github.com/mckenna654/NuvioExporter/pkgs/container/nuvio2fusion"><img src="https://img.shields.io/badge/container-ghcr.io-2496ED?logo=docker&logoColor=white" alt="Container image on GitHub Container Registry"></a>
+  <a href="https://github.com/mckenna654/NuvioExporter/pkgs/container/nuvioexporter"><img src="https://img.shields.io/badge/container-ghcr.io-2496ED?logo=docker&logoColor=white" alt="Container image on GitHub Container Registry"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-b5eed2" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/Python-3.11%2B-a7a0ef" alt="Python 3.11 or later">
   <img src="https://img.shields.io/badge/platform-linux%2Famd64%20%7C%20arm64-8bd5ca" alt="Linux amd64 and arm64">
@@ -21,7 +21,7 @@
 
 Export your configured collections from Nuvio, open the JSON in NuvioExporter, then choose Fusion or Remux. Fusion exports a widget file. Remux imports the catalog-backed setup directly through its administrator API and can update the same setup on later runs.
 
-The public product name and repository are now **NuvioExporter**. The container image and compatibility identifiers remain `nuvio2fusion`, so existing image pulls and saved profiles continue to work. GitHub redirects the previous repository URL.
+The application, repository, container, configuration variables, and install files all use the **NuvioExporter** name.
 
 NuvioExporter preserves the layout and references to your original catalog sources. Ordinary catalogs stay connected directly to their addons. The optional compatibility addon serves mixed catalogs as separate movie and series feeds and protects separate genre selections that Fusion's importer otherwise drops. It keeps the original provider and query. Keep NuvioExporter running when using that addon, and keep your original addons installed for metadata. Accounts and provider configurations are not migrated.
 
@@ -40,7 +40,7 @@ NuvioExporter preserves the layout and references to your original catalog sourc
 
 ## Quick start
 
-**Installing on Unraid?** Use the [Unraid installation guide](docs/UNRAID.md) and the [v3.0.1 release downloads](https://github.com/mckenna654/NuvioExporter/releases/tag/v3.0.1). The public image is `ghcr.io/mckenna654/nuvio2fusion:3.0.1`; no registry login is needed. **Compatibility mode requires an appdata path mapped to `/data`.**
+**Installing on Unraid?** Use the [Unraid installation guide](docs/UNRAID.md) and the [v3.1.0 release downloads](https://github.com/mckenna654/NuvioExporter/releases/tag/v3.1.0). The public image is `ghcr.io/mckenna654/nuvioexporter:3.1.0`; no registry login is needed. **Compatibility mode requires an appdata path mapped to `/data`.**
 
 ### Run with Python
 
@@ -77,20 +77,20 @@ To update a local build, pull the repository changes and run `docker compose up 
 
 ### Use the published container
 
-Published images are available from [GitHub Container Registry](https://github.com/mckenna654/NuvioExporter/pkgs/container/nuvio2fusion). For the pinned release:
+Published images are available from [GitHub Container Registry](https://github.com/mckenna654/NuvioExporter/pkgs/container/nuvioexporter). For the pinned release:
 
 ```sh
 docker run -d \
-  --name nuvio2fusion \
+  --name nuvioexporter \
   --restart unless-stopped \
   -p 127.0.0.1:7088:7088 \
-  -v nuvio2fusion-data:/data \
-  ghcr.io/mckenna654/nuvio2fusion:3.0.1
+  -v nuvioexporter-data:/data \
+  ghcr.io/mckenna654/nuvioexporter:3.1.0
 ```
 
 `latest` follows successful builds of `main`; `sha-<commit>` identifies a particular build. Version tags are generated when a matching `v<version>` Git tag is published. Builds target Linux `amd64` and `arm64`. Check [Actions](https://github.com/mckenna654/NuvioExporter/actions) before assuming a particular image tag exists.
 
-For Unraid, the [installation guide](docs/UNRAID.md) covers the [versioned XML template](unraid-template.xml), manual Add Container setup and updates. One private appdata volume is needed for compatibility profiles; no media or Docker socket mounts are needed. [docker-compose.release.yml](docker-compose.release.yml) runs the prebuilt release without cloning or building the application. Both Compose examples bind to localhost by default; set the release file's `NUVIO2FUSION_BIND_IP` to your server's LAN address for trusted network access. The management UI/API has no authentication layer.
+For Unraid, the [installation guide](docs/UNRAID.md) covers the [versioned XML template](unraid-template.xml), manual Add Container setup and updates. One private appdata volume is needed for compatibility profiles; no media or Docker socket mounts are needed. [docker-compose.release.yml](docker-compose.release.yml) runs the prebuilt release without cloning or building the application. Both Compose examples bind to localhost by default; set the release file's `NUVIOEXPORTER_BIND_IP` to your server's LAN address for trusted network access. The management UI/API has no authentication layer.
 
 ## Send a setup to Remux
 
@@ -101,7 +101,7 @@ NuvioExporter checks the Remux administrator session, installed Stremio addons a
 1. Installs a missing Stremio catalog addon from the exact manifest URL you supplied, or reuses the matching enabled addon already in Remux.
 2. Enables only the source catalogs used by this setup. Existing addon catalog settings are left alone.
 3. Creates a manual group for each Nuvio collection and a smart Remux collection for each folder. Folder sources become a catalog membership filter, so Remux refreshes current catalog contents instead of receiving a one-time list of titles.
-4. Applies the original order and a private `nuvio2fusion:<setup>:<entry>` marker. Reusing the same setup name updates those entries instead of creating duplicates.
+4. Applies the original order and a private `nuvioexporter:<setup>:<entry>` marker. Reusing the same setup name updates those entries instead of creating duplicates. Version 3.1.0 also recognizes and migrates markers created by earlier releases.
 5. Requests `POST /library/refresh` so Remux can populate the collections.
 
 Mixed and genre-filtered sources use the optional compatibility addon. Covers, tile shapes, hidden titles, native Nuvio TMDB/Trakt recipes and exact cross-source interleaving are reported as unsupported or approximate; they are never silently rewritten. Existing collections are not deleted, including folders omitted because their addon URL was not supplied.
@@ -228,9 +228,9 @@ Only the widget file goes into Fusion. Do not import the report or the entire AP
 | --- | --- | --- |
 | `HOST` | `127.0.0.1` with Python; `0.0.0.0` inside Docker | Listening address |
 | `PORT` | `7088` | Listening port |
-| `NUVIO2FUSION_DATA_DIR` | `./data` with Python; `/data` in Docker | Private persistent compatibility profiles |
-| `NUVIO2FUSION_PUBLIC_URL` | Browser's current origin | Optional default public/LAN address placed into exports |
-| `NUVIO2FUSION_ALLOW_PRIVATE_UPSTREAM` | Off | Set `1` only for trusted RFC1918/ULA LAN addon servers |
+| `NUVIOEXPORTER_DATA_DIR` | `./data` with Python; `/data` in Docker | Private persistent compatibility profiles |
+| `NUVIOEXPORTER_PUBLIC_URL` | Browser's current origin | Optional default public/LAN address placed into exports |
+| `NUVIOEXPORTER_ALLOW_PRIVATE_UPSTREAM` | Off | Set `1` only for trusted RFC1918/ULA LAN addon servers |
 | Browser upload limit | 5 MiB | Maximum individual source file |
 | API request limit | 10 MiB | Maximum request body |
 | Conversion limits | 1,000 widgets/collections; 10,000 source references | Bound large inputs |

@@ -9,7 +9,7 @@ class ApiTests(unittest.TestCase):
         self.client = TestClient(app)
 
     def test_health_and_local_assets(self):
-        self.assertEqual(self.client.get('/api/health').json(), {'status': 'ok', 'app': 'NuvioExporter', 'version': '3.0.1'})
+        self.assertEqual(self.client.get('/api/health').json(), {'status': 'ok', 'app': 'NuvioExporter', 'version': '3.1.0'})
         page = self.client.get('/')
         self.assertEqual(page.status_code, 200)
         self.assertIn("script-src 'self'", page.headers['Content-Security-Policy'])

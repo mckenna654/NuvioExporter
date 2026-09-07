@@ -122,12 +122,26 @@ class RemuxTests(unittest.TestCase):
         self.assertEqual(len(self.remote.addons), 1)
         self.assertEqual(self.remote.items[0]['Name'], 'Renamed')
 
+    def test_retired_markers_are_updated_without_duplicates(self):
+        first = self.preview()
+        self.assertTrue(self.service.apply(first['previewToken'], 'key')['success'])
+        retired = 'nuvio' + '2fusion:'
+        for item in self.remote.items:
+            item['Tags'] = [tag.replace('nuvioexporter:', retired) for tag in item['Tags']]
+        second = self.preview()
+        self.assertTrue(all(action['action'] == 'update' for action in second['actions']))
+        self.assertTrue(self.service.apply(second['previewToken'], 'key')['success'])
+        self.assertEqual(len(self.remote.items), 2)
+        for item in self.remote.items:
+            self.assertTrue(any(tag.startswith('nuvioexporter:') for tag in item['Tags']))
+            self.assertFalse(any(tag.startswith(retired) for tag in item['Tags']))
+
     def test_interrupted_creation_is_recovered_by_temporary_name(self):
         self.remote.fail_patch = True
         first = self.preview()
         self.assertFalse(self.service.apply(first['previewToken'], 'key')['success'])
         self.assertEqual(len(self.remote.items), 1)
-        self.assertTrue(self.remote.items[0]['Name'].startswith('nuvio2fusion:'))
+        self.assertTrue(self.remote.items[0]['Name'].startswith('nuvioexporter:'))
         # New process has no local ID database; matching survives restart.
         self.service = RemuxService(self.store, lambda url, key: self.remote)
         retry = self.preview()

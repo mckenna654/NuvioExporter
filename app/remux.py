@@ -14,6 +14,7 @@ import uuid
 from collections import Counter
 from urllib.parse import urlsplit
 
+from app import USER_AGENT
 from app.bridge import BridgePlan, canonical, public_base_url
 from app.fusion import FusionConversion, TYPE_ALIASES, manifest_url, string
 from app.upstream import permitted_ip
@@ -76,7 +77,7 @@ class RemuxClient:
             if conn.sock is None:
                 raise last_error or OSError()
             headers = {'Accept': 'application/json', 'Accept-Encoding': 'identity',
-                       'X-Emby-Token': self.api_key, 'User-Agent': 'NuvioExporter/3.0'}
+                       'X-Emby-Token': self.api_key, 'User-Agent': USER_AGENT}
             data = None
             if body is not None:
                 data = json.dumps(body).encode()
@@ -231,12 +232,19 @@ def get_collections(client):
 
 
 def marker(scope, key):
-    return 'nuvio2fusion:' + scope + ':' + key
+    return 'nuvioexporter:' + scope + ':' + key
 
 
-def match_collection(items, tag):
+def marker_aliases(scope, key):
+    # Recognize the retired marker so an existing Remux setup is migrated
+    # instead of duplicated when it is imported again.
+    return marker(scope, key), 'nuvio' + '2fusion:' + scope + ':' + key
+
+
+def match_collection(items, tags):
     # A temporary unique name recovers interrupted creation before PATCH sets tags.
-    found = [i for i in items if tag in (i.get('Tags') or []) or i.get('Name') == tag]
+    tags = set(tags)
+    found = [i for i in items if tags.intersection(i.get('Tags') or []) or i.get('Name') in tags]
     if len(found) > 1:
         raise RemuxError('Multiple Remux collections have the same import marker. Resolve the duplicate before importing.')
     return found[0] if found else None
@@ -273,7 +281,7 @@ class RemuxService:
         actions = []
         for group in plan['groups']:
             for node in [group, *group['folders']]:
-                existing = match_collection(items, marker(scope, node['key']))
+                existing = match_collection(items, marker_aliases(scope, node['key']))
                 actions.append({'name': node['name'], 'kind': 'group' if node is group else 'collection',
                                 'action': 'update' if existing else 'create'})
         sources = self.sources(plan)
@@ -391,7 +399,8 @@ class RemuxService:
 
             def upsert(node, group=False):
                 tag = marker(scope, node['key'])
-                existing = match_collection(items, tag)
+                aliases = marker_aliases(scope, node['key'])
+                existing = match_collection(items, aliases)
                 action = 'Updated ' if existing else 'Created '
                 if existing:
                     item_id = uuid_text(existing['Id'])
@@ -405,7 +414,8 @@ class RemuxService:
                     items.append(existing)
                 patch = {'Name': node['name'], 'CollectionType': 'collections' if group else 'mixed',
                     'CollectionKind': 'manual' if group else 'smart', 'Promoted': group,
-                    'SortOrder': node['order'], 'Tags': list(dict.fromkeys([*(existing.get('Tags') or []), tag]))}
+                    'SortOrder': node['order'], 'Tags': list(dict.fromkeys([
+                        *(t for t in (existing.get('Tags') or []) if t not in aliases), tag]))}
                 if not group:
                     ids = []
                     for source in node['sources']:

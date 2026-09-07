@@ -13,6 +13,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 from fastapi.exceptions import RequestValidationError
 
+from app import APP_NAME, VERSION
 from app.fusion import convert_to_fusion
 from app.bridge import BridgeError, BridgePlan, BridgeService, PAGE_SIZE, ProfileStore
 from app.upstream import UpstreamError
@@ -21,13 +22,11 @@ from urllib.parse import parse_qsl
 
 ROOT = Path(__file__).parent
 MAX_REQUEST_BYTES = 10 * 1024 * 1024
-VERSION = '3.0.1'
-APP_NAME = 'NuvioExporter'
 app = FastAPI(title=APP_NAME, version=VERSION,
               description='Convert Nuvio collections for Fusion or import their catalog setup into Remux.',
               docs_url=None, redoc_url=None)
 app.mount('/static', StaticFiles(directory=ROOT / 'static'), name='static')
-app.state.bridge = BridgeService(ProfileStore(os.getenv('NUVIO2FUSION_DATA_DIR', str(ROOT.parent / 'data'))))
+app.state.bridge = BridgeService(ProfileStore(os.getenv('NUVIOEXPORTER_DATA_DIR', str(ROOT.parent / 'data'))))
 app.state.remux = RemuxService(app.state.bridge.store)
 
 
@@ -143,8 +142,8 @@ async def health():
 
 @app.get('/api/bridge/settings')
 def bridge_settings():
-    return {'publicUrl': os.getenv('NUVIO2FUSION_PUBLIC_URL', ''),
-            'privateUpstreamsAllowed': os.getenv('NUVIO2FUSION_ALLOW_PRIVATE_UPSTREAM') == '1'}
+    return {'publicUrl': os.getenv('NUVIOEXPORTER_PUBLIC_URL', ''),
+            'privateUpstreamsAllowed': os.getenv('NUVIOEXPORTER_ALLOW_PRIVATE_UPSTREAM') == '1'}
 
 
 @app.exception_handler(BridgeError)

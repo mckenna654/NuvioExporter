@@ -11,6 +11,8 @@ import threading
 import time
 from urllib.parse import urljoin, urlsplit
 
+from app import USER_AGENT
+
 
 class UpstreamError(Exception):
     """Messages are deliberately safe to return without leaking configured URLs."""
@@ -68,7 +70,7 @@ class JsonFetcher:
             port = parts.port or (443 if parts.scheme == 'https' else 80)
             addresses = socket.getaddrinfo(parts.hostname, port, type=socket.SOCK_STREAM)
             if not addresses or any(not permitted_ip(a[4][0], self.allow_private) for a in addresses):
-                raise UpstreamError('Private or reserved upstream addresses are blocked. For a trusted LAN addon, enable NUVIO2FUSION_ALLOW_PRIVATE_UPSTREAM.')
+                raise UpstreamError('Private or reserved upstream addresses are blocked. For a trusted LAN addon, enable NUVIOEXPORTER_ALLOW_PRIVATE_UPSTREAM.')
             conn = http.client.HTTPConnection(parts.hostname, port, timeout=self.timeout)
             # Connect to the checked numeric address, without a second DNS lookup.
             # HTTPConnection keeps the original hostname for its Host header.
@@ -95,7 +97,7 @@ class JsonFetcher:
                 if parts.query:
                     target += '?' + parts.query
                 conn.request('GET', target, headers={'Accept': 'application/json',
-                             'Accept-Encoding': 'identity', 'User-Agent': 'NuvioExporter/3.0'})
+                             'Accept-Encoding': 'identity', 'User-Agent': USER_AGENT})
                 response = conn.getresponse()
                 if response.status in {301, 302, 303, 307, 308}:
                     location = response.getheader('Location')

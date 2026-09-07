@@ -57,7 +57,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/mckenna654/nuvio2fusion
+          images: ghcr.io/mckenna654/nuvioexporter
           tags: |
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
             type=semver,pattern={{version}}
@@ -79,18 +79,18 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Verify the published container starts and converts
         env:
-          RELEASE_IMAGE: ghcr.io/mckenna654/nuvio2fusion@${{ steps.build.outputs.digest }}
+          RELEASE_IMAGE: ghcr.io/mckenna654/nuvioexporter@${{ steps.build.outputs.digest }}
         run: |
           docker compose -f docker-compose.release.yml config --quiet
-          mkdir -p "$RUNNER_TEMP/nuvio2fusion-data"
-          docker run --detach --name nuvio2fusion-smoke --publish 127.0.0.1:7088:7088 --volume "$RUNNER_TEMP/nuvio2fusion-data:/data" "$RELEASE_IMAGE"
+          mkdir -p "$RUNNER_TEMP/nuvioexporter-data"
+          docker run --detach --name nuvioexporter-smoke --publish 127.0.0.1:7088:7088 --volume "$RUNNER_TEMP/nuvioexporter-data:/data" "$RELEASE_IMAGE"
           python scripts/smoke_container.py http://127.0.0.1:7088
-          docker exec nuvio2fusion-smoke python -c 'from pathlib import Path; status = Path("/proc/1/status").read_text(); assert "Uid:\t10001\t10001\t10001\t10001" in status'
-          python scripts/smoke_bridge.py create http://127.0.0.1:7088 "$RUNNER_TEMP/nuvio2fusion-profile.json"
-          docker rm --force nuvio2fusion-smoke
-          docker run --detach --name nuvio2fusion-smoke --publish 127.0.0.1:7088:7088 --volume "$RUNNER_TEMP/nuvio2fusion-data:/data" "$RELEASE_IMAGE"
+          docker exec nuvioexporter-smoke python -c 'from pathlib import Path; status = Path("/proc/1/status").read_text(); assert "Uid:\t10001\t10001\t10001\t10001" in status'
+          python scripts/smoke_bridge.py create http://127.0.0.1:7088 "$RUNNER_TEMP/nuvioexporter-profile.json"
+          docker rm --force nuvioexporter-smoke
+          docker run --detach --name nuvioexporter-smoke --publish 127.0.0.1:7088:7088 --volume "$RUNNER_TEMP/nuvioexporter-data:/data" "$RELEASE_IMAGE"
           python scripts/smoke_container.py http://127.0.0.1:7088
-          python scripts/smoke_bridge.py verify http://127.0.0.1:7088 "$RUNNER_TEMP/nuvio2fusion-profile.json"
+          python scripts/smoke_bridge.py verify http://127.0.0.1:7088 "$RUNNER_TEMP/nuvioexporter-profile.json"
       - name: Attach installation files to the release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
@@ -100,5 +100,5 @@ jobs:
       - name: Container smoke-test logs and cleanup
         if: always()
         run: |
-          docker logs nuvio2fusion-smoke 2>/dev/null || true
-          docker rm --force nuvio2fusion-smoke 2>/dev/null || true
+          docker logs nuvioexporter-smoke 2>/dev/null || true
+          docker rm --force nuvioexporter-smoke 2>/dev/null || true
