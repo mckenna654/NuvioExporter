@@ -8,8 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/mckenna654/nuvio2fusion/actions/workflows/docker-publish.yml"><img src="https://github.com/mckenna654/nuvio2fusion/actions/workflows/docker-publish.yml/badge.svg" alt="Build status"></a>
-  <a href="https://github.com/mckenna654/nuvio2fusion/releases/latest"><img src="https://img.shields.io/github/v/release/mckenna654/nuvio2fusion?display_name=tag&sort=semver" alt="Latest release"></a>
+  <a href="https://github.com/mckenna654/NuvioExporter/actions/workflows/docker-publish.yml"><img src="https://github.com/mckenna654/NuvioExporter/actions/workflows/docker-publish.yml/badge.svg" alt="Build status"></a>
+  <a href="https://github.com/mckenna654/NuvioExporter/releases/latest"><img src="https://img.shields.io/github/v/release/mckenna654/nuvio2fusion?display_name=tag&sort=semver" alt="Latest release"></a>
   <a href="https://github.com/mckenna654/nuvio2fusion/pkgs/container/nuvio2fusion"><img src="https://img.shields.io/badge/container-ghcr.io-2496ED?logo=docker&logoColor=white" alt="Container image on GitHub Container Registry"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-b5eed2" alt="MIT license"></a>
   <img src="https://img.shields.io/badge/Python-3.11%2B-a7a0ef" alt="Python 3.11 or later">
@@ -21,7 +21,7 @@
 
 Export your configured collections from Nuvio, open the JSON in NuvioExporter, then choose Fusion or Remux. Fusion exports a widget file. Remux imports the catalog-backed setup directly through its administrator API and can update the same setup on later runs.
 
-The public product name is now **NuvioExporter**. The GitHub repository slug and existing container name remain `nuvio2fusion` so current install links and compatibility profiles continue to work.
+The public product name and repository are now **NuvioExporter**. The container image and compatibility identifiers remain `nuvio2fusion`, so existing image pulls and saved profiles continue to work. GitHub redirects the previous repository URL.
 
 NuvioExporter preserves the layout and references to your original catalog sources. Ordinary catalogs stay connected directly to their addons. The optional compatibility addon serves mixed catalogs as separate movie and series feeds and protects separate genre selections that Fusion's importer otherwise drops. It keeps the original provider and query. Keep NuvioExporter running when using that addon, and keep your original addons installed for metadata. Accounts and provider configurations are not migrated.
 
@@ -40,14 +40,14 @@ NuvioExporter preserves the layout and references to your original catalog sourc
 
 ## Quick start
 
-**Installing on Unraid?** Use the [Unraid installation guide](docs/UNRAID.md) and the [v3.0.0 release downloads](https://github.com/mckenna654/nuvio2fusion/releases/tag/v3.0.0). The public image is `ghcr.io/mckenna654/nuvio2fusion:3.0.0`; no registry login is needed. **Compatibility mode requires an appdata path mapped to `/data`.**
+**Installing on Unraid?** Use the [Unraid installation guide](docs/UNRAID.md) and the [v3.0.0 release downloads](https://github.com/mckenna654/NuvioExporter/releases/tag/v3.0.0). The public image is `ghcr.io/mckenna654/nuvio2fusion:3.0.0`; no registry login is needed. **Compatibility mode requires an appdata path mapped to `/data`.**
 
 ### Run with Python
 
 Requires Python 3.11 or later. Node.js is only needed for development checks, not to run the app.
 
 ```sh
-git clone https://github.com/mckenna654/nuvio2fusion.git
+git clone https://github.com/mckenna654/NuvioExporter.git
 cd nuvio2fusion
 python3 -m venv .venv
 .venv/bin/python -m pip install -r requirements.txt
@@ -88,7 +88,7 @@ docker run -d \
   ghcr.io/mckenna654/nuvio2fusion:3.0.0
 ```
 
-`latest` follows successful builds of `main`; `sha-<commit>` identifies a particular build. Version tags are generated when a matching `v<version>` Git tag is published. Builds target Linux `amd64` and `arm64`. Check [Actions](https://github.com/mckenna654/nuvio2fusion/actions) before assuming a particular image tag exists.
+`latest` follows successful builds of `main`; `sha-<commit>` identifies a particular build. Version tags are generated when a matching `v<version>` Git tag is published. Builds target Linux `amd64` and `arm64`. Check [Actions](https://github.com/mckenna654/NuvioExporter/actions) before assuming a particular image tag exists.
 
 For Unraid, the [installation guide](docs/UNRAID.md) covers the [versioned XML template](unraid-template.xml), manual Add Container setup and updates. One private appdata volume is needed for compatibility profiles; no media or Docker socket mounts are needed. [docker-compose.release.yml](docker-compose.release.yml) runs the prebuilt release without cloning or building the application. Both Compose examples bind to localhost by default; set the release file's `NUVIO2FUSION_BIND_IP` to your server's LAN address for trusted network access. The management UI/API has no authentication layer.
 
