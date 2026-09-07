@@ -16,7 +16,7 @@ if __name__ == "__main__":
         sys.stderr.write(f"Invalid PORT value '{port_str}', defaulting to 7088\n")
         port = 7088
 
-    print(f"🚀 Starting Nuvio2Fusion on http://{host}:{port}")
+    print(f"🚀 Starting NuvioExporter on http://{host}:{port}")
     sys.stdout.flush()
 
     uvicorn.run(
