@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="app/static/brand/logo.svg" alt="Nuvio2Fusion — take your collections with you" width="760">
+  <img src="app/static/brand/logo.svg" alt="NuvioExporter — move your collection setup" width="760">
 </p>
 
 <p align="center">
-  <strong>Your Nuvio collections. Your Fusion home screen.</strong><br>
-  A small, self-hosted tool for converting Nuvio collections into Fusion widget JSON.
+  <strong>Your Nuvio collections. A new home.</strong><br>
+  A small, self-hosted tool for moving Nuvio collection setups to Fusion or Remux.
 </p>
 
 <p align="center">
@@ -19,9 +19,11 @@
 
 ## What it does
 
-Export your configured collections from Nuvio, open the JSON in Nuvio2Fusion, resolve any missing addon URLs, and download a Fusion widget file. Existing Fusion widget exports can also be checked and re-exported.
+Export your configured collections from Nuvio, open the JSON in NuvioExporter, then choose Fusion or Remux. Fusion exports a widget file. Remux imports the catalog-backed setup directly through its administrator API and can update the same setup on later runs.
 
-Nuvio2Fusion preserves the layout and references to your original catalog sources. Ordinary catalogs stay connected directly to their addons. The optional compatibility addon serves mixed catalogs as separate movie and series feeds and protects separate genre selections that Fusion's importer otherwise drops. It keeps the original provider and query. Keep Nuvio2Fusion running when using that addon, and keep your original addons installed for metadata. Accounts and provider configurations are not migrated.
+The public product name is now **NuvioExporter**. The GitHub repository slug and existing container name remain `nuvio2fusion` so current install links and compatibility profiles continue to work.
+
+NuvioExporter preserves the layout and references to your original catalog sources. Ordinary catalogs stay connected directly to their addons. The optional compatibility addon serves mixed catalogs as separate movie and series feeds and protects separate genre selections that Fusion's importer otherwise drops. It keeps the original provider and query. Keep NuvioExporter running when using that addon, and keep your original addons installed for metadata. Accounts and provider configurations are not migrated.
 
 - Preserve collection and folder order, titles, covers, tile shapes and hidden folder titles.
 - Keep multiple catalog sources in each folder, including their genre selections.
@@ -30,13 +32,15 @@ Nuvio2Fusion preserves the layout and references to your original catalog source
 - Preserve supported classic rows and native sources when the input is already a Fusion export.
 - Review every omitted source, missing URL and unmapped visual setting before importing.
 - Download the widget JSON and a separate compatibility report.
+- Preview a Remux transfer before changing the server, install or reuse its Stremio catalog addons, and request a library refresh after import.
+- Update previously imported Remux groups and collections using private import markers; the importer never deletes collections.
 - Run locally with Python or Docker; conversion makes no outbound catalog or artwork requests.
 
 **This is a collections converter, not a full Nuvio backup converter.** Player settings, credentials, watch history, libraries and home rows absent from the export are not transferred.
 
 ## Quick start
 
-**Installing on Unraid?** Use the [Unraid installation guide](docs/UNRAID.md) and the [v2.1.1 release downloads](https://github.com/mckenna654/nuvio2fusion/releases/tag/v2.1.1). The public image is `ghcr.io/mckenna654/nuvio2fusion:2.1.1`; no registry login is needed. **Compatibility mode requires an appdata path mapped to `/data`.**
+**Installing on Unraid?** Use the [Unraid installation guide](docs/UNRAID.md) and the [v3.0.0 release downloads](https://github.com/mckenna654/nuvio2fusion/releases/tag/v3.0.0). The public image is `ghcr.io/mckenna654/nuvio2fusion:3.0.0`; no registry login is needed. **Compatibility mode requires an appdata path mapped to `/data`.**
 
 ### Run with Python
 
@@ -81,22 +85,50 @@ docker run -d \
   --restart unless-stopped \
   -p 127.0.0.1:7088:7088 \
   -v nuvio2fusion-data:/data \
-  ghcr.io/mckenna654/nuvio2fusion:2.1.1
+  ghcr.io/mckenna654/nuvio2fusion:3.0.0
 ```
 
 `latest` follows successful builds of `main`; `sha-<commit>` identifies a particular build. Version tags are generated when a matching `v<version>` Git tag is published. Builds target Linux `amd64` and `arm64`. Check [Actions](https://github.com/mckenna654/nuvio2fusion/actions) before assuming a particular image tag exists.
 
 For Unraid, the [installation guide](docs/UNRAID.md) covers the [versioned XML template](unraid-template.xml), manual Add Container setup and updates. One private appdata volume is needed for compatibility profiles; no media or Docker socket mounts are needed. [docker-compose.release.yml](docker-compose.release.yml) runs the prebuilt release without cloning or building the application. Both Compose examples bind to localhost by default; set the release file's `NUVIO2FUSION_BIND_IP` to your server's LAN address for trusted network access. The management UI/API has no authentication layer.
 
-## Convert a setup
+## Send a setup to Remux
+
+Choose **Remux · Import through the API** in the destination menu. Enter the Remux server address, an administrator API key, and a stable setup name. The key is sent only for the preview/import requests and is not written to the NuvioExporter profile store.
+
+NuvioExporter checks the Remux administrator session, installed Stremio addons and advertised catalog IDs before it offers the import button. A preview lists groups and collections that will be created or updated. Import then:
+
+1. Installs a missing Stremio catalog addon from the exact manifest URL you supplied, or reuses the matching enabled addon already in Remux.
+2. Enables only the source catalogs used by this setup. Existing addon catalog settings are left alone.
+3. Creates a manual group for each Nuvio collection and a smart Remux collection for each folder. Folder sources become a catalog membership filter, so Remux refreshes current catalog contents instead of receiving a one-time list of titles.
+4. Applies the original order and a private `nuvio2fusion:<setup>:<entry>` marker. Reusing the same setup name updates those entries instead of creating duplicates.
+5. Requests `POST /library/refresh` so Remux can populate the collections.
+
+Mixed and genre-filtered sources use the optional compatibility addon. Covers, tile shapes, hidden titles, native Nuvio TMDB/Trakt recipes and exact cross-source interleaving are reported as unsupported or approximate; they are never silently rewritten. Existing collections are not deleted, including folders omitted because their addon URL was not supplied.
+
+For a direct API integration, the app exposes the same two endpoints used by the GUI:
+
+```sh
+curl --fail-with-body http://127.0.0.1:7088/api/remux/preview \
+  -H 'Content-Type: application/json' \
+  --data-binary @remux-preview.json
+
+curl --fail-with-body http://127.0.0.1:7088/api/remux/import \
+  -H 'Content-Type: application/json' \
+  --data-binary @remux-import.json
+```
+
+The preview body contains `export_data`, `addon_urls`, `server_url`, `api_key`, `setup_name`, and optionally `bridge_url`. The import body contains the returned `previewToken` and `api_key`. A preview expires after 15 minutes and is single-use. Do not put API keys or configured manifest URLs in a repository, issue, gist or support screenshot.
+
+## Convert a setup to Fusion
 
 1. **Back up your existing Fusion widgets.** Keep the original Nuvio export as well.
 2. **Export collections from Nuvio.** Use its collection-management export. The usual result is a JSON array of collections, not a manifest URL or account backup.
-3. **Upload or paste the JSON** into Nuvio2Fusion. The **Addon to connect** menu lists addon IDs found in your file, with their catalog counts.
+3. **Upload or paste the JSON** into NuvioExporter. The **Addon to connect** menu lists addon IDs found in your file, with their catalog counts.
 4. **Connect only the addons you use.** Choose an addon, paste its normal URL in **Addon manifest URL**, and click **Connect addon**, then select **Convert to Fusion**. For `aio-metadata`, use your own configuration's full install URL, not its homepage. Leave optional addons such as Bingecat blank: their sources are omitted with a warning, while connected sources remain exportable. You can also convert first and fill the optional missing-URL fields. No JSON formatting is needed.
-5. **Keep catalog compatibility enabled.** Set **Nuvio2Fusion address reachable from Fusion** to your server's LAN URL, such as `http://192.168.1.10:7088`. Do not use localhost for another device. This preserves mixed feeds and separate genre filters. Leave **Hide folders with no usable sources** enabled to omit optional-addon-only tiles. Convert and review the results.
+5. **Keep catalog compatibility enabled.** Set **NuvioExporter address reachable from Fusion** to your server's LAN URL, such as `http://192.168.1.10:7088`. Do not use localhost for another device. This preserves mixed feeds and separate genre filters. Leave **Hide folders with no usable sources** enabled to omit optional-addon-only tiles. Convert and review the results.
 6. **Download Fusion widgets.** The compatibility report is a separate download for your review; it is not a Fusion import file.
-7. **Replace the earlier converted rows, then import once.** Fusion appends imports instead of updating matching widget IDs. After making a backup, remove your earlier Nuvio-imported collection rows before importing the corrected file; otherwise old and corrected copies coexist. Install the listed compatibility addon if prompted, keep both Nuvio2Fusion and the original metadata addons available, and test a few folders after import.
+7. **Replace the earlier converted rows, then import once.** Fusion appends imports instead of updating matching widget IDs. After making a backup, remove your earlier Nuvio-imported collection rows before importing the corrected file; otherwise old and corrected copies coexist. Install the listed compatibility addon if prompted, keep both NuvioExporter and the original metadata addons available, and test a few folders after import.
 
 If your Fusion device only offers URL import, use a Fusion client that accepts the file/text or a private hosting method you control. Widget files can contain account-specific install URLs: **do not publish them to a public gist or repository**.
 
@@ -104,7 +136,7 @@ The two bundled examples use deliberately nonfunctional addon/artwork URLs. They
 
 ## Addon URL mapping
 
-Nuvio often stores a logical addon ID, such as `my.addon`. Fusion stores the full manifest URL. Nuvio2Fusion resolves each source in this order:
+Nuvio often stores a logical addon ID, such as `my.addon`. Fusion stores the full manifest URL. NuvioExporter resolves each source in this order:
 
 1. An explicit URL mapping for that addon ID.
 2. The source's `manifestUrl`.
@@ -225,6 +257,8 @@ The machine-readable API schema is available at `/openapi.json` on your local in
 | `GET` | `/api/presets/nuvio` | Neutral Nuvio example in `rawData` |
 | `GET` | `/api/presets/fusion` | Neutral Fusion example in `rawData` |
 | `POST` | `/api/fusion/convert` | Convert JSON and return `fusionConfig` plus `report` |
+| `POST` | `/api/remux/preview` | Validate a Remux connection and return a reviewable import plan |
+| `POST` | `/api/remux/import` | Apply a preview plan to Remux and request a library refresh |
 | `GET` | `/api/bridge/settings` | Default server address and LAN-upstream policy |
 | `GET` | `/bridge/{token}/manifest.json` | Registered compatibility profile manifest |
 | `GET` | `/bridge/{token}/catalog/{type}/{id}/skip={offset}.json` | Filtered page; bounded `limit` and empty/default `extra` options used by Fusion are accepted |
@@ -301,7 +335,7 @@ The suite covers URL resolution, source mirrors, ordering, multiple providers, n
 
 CI tests Python 3.11 and 3.14 before publishing Linux container images, then checks the running application's UID, health, page and example conversion. It creates a compatibility profile, replaces the container using the same bind mount, and verifies the original manifest link still works. Pull requests run checks without publishing. Tests also cover filtering, pagination, error recovery, storage, unsafe network destinations and profile URL privacy.
 
-Project layout: `app/fusion.py` handles conversion; `app/main.py` serves the API; `app/static/js/fusion.js` handles the browser workflow; `app/presets/` contains neutral examples; `tests/` contains regression coverage.
+Project layout: `app/fusion.py` and `app/remux.py` handle the two transfer paths; `app/main.py` serves the API; `app/static/js/fusion.js` handles the browser workflow; `app/presets/` contains neutral examples; `tests/` contains regression coverage.
 
 ## Contributors
 
@@ -310,6 +344,6 @@ Project layout: `app/fusion.py` handles conversion; `app/main.py` serves the API
 
 ## Project identity and license
 
-**Nuvio2Fusion** — *take your collections with you.* The original vector mark represents two collection tiles and a forward transfer arrow. SVG and PNG assets are in [`app/static/brand/`](app/static/brand/); see [brand asset notes](docs/BRANDING.md).
+**NuvioExporter** — *move your collection setup.* The original vector mark represents two collection tiles and a forward transfer arrow. SVG and PNG assets are in [`app/static/brand/`](app/static/brand/); see [brand asset notes](docs/BRANDING.md).
 
 [MIT licensed](LICENSE). Independent community software, not affiliated with or endorsed by Nuvio or Fusion. Their names belong to their respective owners. Read [release notes](RELEASE_NOTES.md) for changes and upgrade guidance.
