@@ -1,4 +1,25 @@
-# Nuvio2Fusion release notes
+# NuvioExporter release notes
+
+## 3.0.0 · 7 September 2026
+
+Add Remux as a first-class destination for Nuvio collection setups. Fusion conversion remains available as the default path.
+
+The product is presented as **NuvioExporter** now that it supports both destinations. Existing repository, container and compatibility identifiers stay unchanged so current links and saved profiles continue to work.
+
+- Add a destination selector and Remux connection form to the GUI. Remux imports require an administrator API key, server address and stable setup name; the key is held only in the browser request flow.
+- Preview Remux changes before applying them. The preview validates the administrator session, matching Stremio addons, advertised catalog IDs and the collections that will be created or updated.
+- Create manual Remux group containers for Nuvio collections and smart collections for folders. Folder sources become Remux catalog membership filters, so Remux refreshes current catalog content instead of receiving a one-time title snapshot.
+- Install missing Stremio catalog addons from the exact configured manifest URL, reuse matching enabled addons, and enable only the catalogs used by the imported setup. Existing unrelated addon settings are preserved.
+- Add stable private import markers so rerunning the same setup updates its collections without duplicates. Interrupted creates are recoverable; omitted or removed Nuvio folders are never deleted from Remux.
+- Request a Remux library refresh after the import and show the result, warnings and source coverage in the browser. Export a sanitized import report for review.
+- Preserve mixed and genre-filtered sources through the existing persistent compatibility addon. Unsupported native Nuvio providers, visual-only settings and exact cross-source interleaving remain explicit warnings.
+- Add bounded Remux transport checks, TLS verification, DNS destination checks, API-key header handling, redirect rejection and response limits. API keys and configured addon URLs are excluded from plans, reports and logs.
+- Document the Remux API workflow, Unraid upgrade path and direct preview/import requests. Update the image, template and health version to `3.0.0`.
+- Add 15 Remux-focused tests covering repeat imports, interrupted creation, catalog filtering, mixed/genre bridge behavior, privacy, validation and HTTP transport.
+
+**Upgrade:** use `ghcr.io/mckenna654/nuvio2fusion:3.0.0` and preserve the existing `/data` mapping. Fusion users should reconvert the original Nuvio export as before. Remux users should preview the setup, review the planned creates/updates, then import; keep the NuvioExporter service running when compatibility feeds are required.
+
+**Validation:** 84 Python tests pass, including the original Fusion/bridge suite and the Remux integration contract tests. Browser smoke inspection confirms the Fusion/Remux destination selector, connection fields and transfer review panel render from the self-hosted app.
 
 ## 2.1.1 · 1 September 2026
 
@@ -11,7 +32,7 @@ Fix compatibility-backed collections that imported with sources but opened blank
 - Warn that Fusion appends widget imports instead of updating matching IDs. Back up and remove earlier Nuvio-imported rows before importing the regenerated file once, so stale and corrected copies do not coexist.
 - Add regression coverage for the exact native request shape, bounded query rejection, fixed-type profiles, genre preservation and the `None` sentinel. The full suite now contains 69 passing tests.
 
-**Upgrade:** set the Unraid Repository to `ghcr.io/mckenna654/nuvio2fusion:2.1.1`, keep the existing `/data` mapping, and apply. Existing compatibility links benefit from the catalog-request fix immediately. Reconvert the **original Nuvio export** to protect standalone genre filters, using the same reachable server address. Back up Fusion, remove the previous Nuvio-imported collection rows, then import the new file once. Keep the Nuvio2Fusion container and original metadata addon available.
+**Upgrade:** set the Unraid Repository to `ghcr.io/mckenna654/nuvio2fusion:2.1.1`, keep the existing `/data` mapping, and apply. Existing compatibility links benefit from the catalog-request fix immediately. Reconvert the **original Nuvio export** to protect standalone genre filters, using the same reachable server address. Back up Fusion, remove the previous Nuvio-imported collection rows, then import the new file once. Keep the NuvioExporter container and original metadata addon available.
 
 **Validation:** the native diagnosis used a local neutral addon and one disposable test widget; both movie and series items rendered in Fusion when the generic request parameters were accepted. A clean native re-export also proved that source arrays survive the corrected movie/series layout while standalone genre fields do not. The private original export produces 12 rows, 153 nonempty folders and all 341 connected references; 24 references use 45 compatibility catalogs, while six optional-addon references remain explicitly omitted. Private collection files, addon URLs and profile tokens remain outside the repository.
 
@@ -61,7 +82,7 @@ The 2.0.3 image built, but its initial startup-check workflow failed before read
 
 Optional addons no longer block exports. Connect only the addons you use; missing instances such as Bingecat are reported without preventing export of connected AIOMetadata catalogs.
 
-- Publish the tagged Nuvio2Fusion release with a public versioned container, pinned Unraid XML template, prebuilt-image Compose file and Unraid install guide.
+- Publish the tagged NuvioExporter release with a public versioned container, pinned Unraid XML template, prebuilt-image Compose file and Unraid install guide.
 - Start the published container in CI and check its non-root user, health endpoint, page and example conversion, in addition to the Python test matrix and multi-architecture build.
 - Allow partial downloads when at least one usable source remains, even if other addons have no URL.
 - Omit unconnected addon references and include only connected, used instances in `requiredAddons`.
@@ -102,11 +123,11 @@ Fixes an export workflow that allowed collection tiles to be downloaded without 
 
 ## 2.0.0 · 31 August 2026
 
-Nuvio2Fusion is now a focused Nuvio collections → Fusion widgets converter. This major release replaces the earlier provider-migration direction with a direct layout transfer, a new identity and explicit compatibility reporting. Existing repository history is preserved.
+NuvioExporter is now a focused Nuvio collections → Fusion widgets converter. This major release replaces the earlier provider-migration direction with a direct layout transfer, a new identity and explicit compatibility reporting. Existing repository history is preserved.
 
 ### New identity and scope
 
-- Introduced the Nuvio2Fusion name and the tagline **“Take your collections with you.”**
+- Introduced the NuvioExporter name and the tagline **“Move your collection setup.”**
 - Added an original collection-transfer logo, SVG favicon, PNG app icon and documentation wordmark.
 - Updated the UI, API metadata, startup message, container service/user, image references and Unraid template.
 - Removed the unrelated catalog-rebuilding workflow, its page/API, remote manifest fetcher and provider-specific examples.
@@ -172,4 +193,4 @@ The remaining regression suite focuses on direct layout conversion and API bound
 
 ## Earlier versions
 
-Earlier releases belong to the project's retired catalog-migration scope. Their source and tags remain in Git history; their endpoints, container references and documentation do not describe Nuvio2Fusion 2.0.0.
+Earlier releases belong to the project's retired catalog-migration scope. Their source and tags remain in Git history; their endpoints, container references and documentation do not describe NuvioExporter 2.0.0.
