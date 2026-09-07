@@ -1,68 +1,125 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Nuvio2Fusion · Take your collections with you</title>
-  <meta name="description" content="Convert Nuvio collections into Fusion widget JSON. Preserve your folders, covers and addon sources with a clear compatibility report.">
-  <meta name="theme-color" content="#0d1117">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NuvioExporter · Move your collection setup</title>
+  <meta name="description" content="Move Nuvio collection setups to Fusion or Remux with a clear preview and report.">
+  <meta name="theme-color" content="#f5f6f8">
   <link rel="icon" href="/static/brand/mark.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/static/brand/icon.png">
   <link rel="stylesheet" href="/static/css/styles.css">
   <script src="/static/js/fusion.js" defer></script>
 </head>
-<body class="fusion-page">
-  <header><a class="brand" href="/" aria-label="Nuvio2Fusion home"><img src="/static/brand/mark.svg" width="38" height="38" alt=""><span class="brand-name">Nuvio<span>2</span>Fusion</span></a><span class="tag">TAKE YOUR COLLECTIONS WITH YOU</span><a href="https://github.com/mckenna654/nuvio2fusion#readme" target="_blank" rel="noreferrer">Guide & source ↗</a></header>
-  <main>
-    <section class="intro"><p class="eyebrow">SAME SOURCES. A NEW HOME SCREEN.</p><h1>Take your setup to Fusion.</h1><p>Turn your Nuvio collections export into Fusion widget JSON.<br>Keep your folders, covers and catalog sources. Review what needs attention.</p></section>
+<body class="exporter-page fusion-page">
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="NuvioExporter home">
+        <img src="/static/brand/mark.svg" width="34" height="34" alt="">
+        <span class="brand-name">NuvioExporter</span>
+      </a>
+      <span class="tag">COLLECTION TRANSFER</span>
+      <a class="source-link" href="https://github.com/mckenna654/nuvio2fusion#readme" target="_blank" rel="noreferrer">Guide &amp; source <span aria-hidden="true">↗</span></a>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="intro">
+      <p class="eyebrow">NUVIOEXPORTER · VERSION 3.0</p>
+      <h1>Move your collection setup.</h1>
+      <p>Choose where it goes, review what will change, then export to Fusion or send it to Remux.</p>
+    </section>
+
     <div class="workspace">
       <form id="fusionForm" class="panel inputs">
-        <div class="section-title"><span class="step">01</span><h2>Your configured setup</h2></div>
-        <label for="inputMode">Input method</label><select id="inputMode"><option value="file">Upload JSON</option><option value="paste">Paste JSON</option></select>
-        <div id="fileSource"><label for="sourceFile">Nuvio collections or existing Fusion widgets</label><input id="sourceFile" type="file" accept=".json,application/json"></div>
-        <div id="pasteSource" hidden><label for="rawJson">Export JSON</label><textarea id="rawJson" rows="9" placeholder='[{"id":"my-collection","title":"Movies","folders":[...]}]' spellcheck="false"></textarea></div>
-        <p class="hint">Use Nuvio’s collections export. A manifest alone has no folder layout. Already-exported Fusion widgets can also be checked and re-exported.</p>
-        <div class="section-title options-title"><span class="step">02</span><h2>Connect the same addons</h2></div>
-        <p class="hint">Connect only the addons you use. Choose an addon below and paste its configured manifest URL. Unconnected addons are skipped with a warning; they do not block sources from other addons.</p>
-        <label for="addonChoice">Addon to connect</label><select id="addonChoice" disabled><option value="">Load collections to choose an addon</option></select>
-        <label for="addonManifest">Addon manifest URL</label><input id="addonManifest" type="text" autocomplete="off" spellcheck="false" placeholder="https://your-addon/config/manifest.json">
-        <button id="connectAddon" type="button">Connect addon</button>
-        <p id="addonEntryStatus" class="hint" aria-live="polite">Paste a normal URL here. JSON is only needed for the optional advanced field.</p>
-        <p id="missingAddonNotice" class="notice" role="status" hidden><strong>Some addons are not connected.</strong> Their catalog references will be omitted. These fields are optional: leave addons you do not use blank and download the partial export. Folders relying only on skipped addons are hidden when Hide empty folders is enabled.</p>
-        <div id="missingMappings"></div>
-        <details><summary>Advanced: JSON URL mappings</summary>
-          <label for="addonUrls">Addon URL mappings (JSON object)</label><textarea id="addonUrls" rows="5" spellcheck="false" autocomplete="off" placeholder='{"my.addon":"https://your-addon/config/manifest.json"}'></textarea>
-          <p class="hint">Use the original addon ID as the key. Separate addons need separate URLs. Do not substitute a different provider’s URL unless its catalog IDs match.</p>
-        </details>
-        <details open><summary>Catalog compatibility addon</summary>
-          <label class="check"><input id="useBridge" type="checkbox" checked>Keep mixed catalogs and genre filters using the compatibility addon</label>
-          <div id="bridgeOptions"><label for="bridgeUrl">Nuvio2Fusion address reachable from Fusion</label><input id="bridgeUrl" type="url" autocomplete="off" placeholder="http://YOUR-UNRAID-IP:7088">
-          <p class="hint">Use your Unraid LAN address, not localhost, for other devices. Mixed catalogs become movie and series feeds; separate genre selections stay filtered after import. Keep this container running and map persistent appdata to <code>/data</code>; private upstream URLs are stored there. The addon fetches catalog pages when Fusion browses them.</p></div>
+        <div class="panel-heading">
+          <div><p class="panel-kicker">Transfer setup</p><h2>Choose a destination</h2></div>
+          <span class="version">3.0</span>
+        </div>
+        <label for="destination">Destination</label>
+        <select id="destination"><option value="fusion">Fusion · download widget JSON</option><option value="remux">Remux · import through the API</option></select>
+        <p id="destinationHint" class="hint">Download a widget file to import into Fusion.</p>
+
+        <div class="form-section">
+          <div class="section-title"><span class="step">01</span><div><h2>Source setup</h2><p>Use a Nuvio collections export or an existing Fusion widget export.</p></div></div>
+          <label for="inputMode">Input method</label>
+          <select id="inputMode"><option value="file">Upload JSON file</option><option value="paste">Paste JSON</option></select>
+          <div id="fileSource"><label for="sourceFile">Collection export</label><input id="sourceFile" type="file" accept=".json,application/json"></div>
+          <div id="pasteSource" hidden><label for="rawJson">Export JSON</label><textarea id="rawJson" rows="9" placeholder='[{"id":"my-collection","title":"Movies","folders":[...]}]' spellcheck="false"></textarea></div>
+          <p class="hint">A manifest URL alone does not contain your folder layout.</p>
+        </div>
+
+        <div class="form-section">
+          <div class="section-title"><span class="step">02</span><div><h2>Source connections</h2><p>Connect the addon URLs used by the setup.</p></div></div>
+          <label for="addonChoice">Addon to connect</label>
+          <select id="addonChoice" disabled><option value="">Load a setup to choose an addon</option></select>
+          <label for="addonManifest">Addon manifest URL</label>
+          <input id="addonManifest" type="text" autocomplete="off" spellcheck="false" placeholder="https://your-addon/config/manifest.json">
+          <button id="connectAddon" type="button">Connect addon</button>
+          <p id="addonEntryStatus" class="hint" aria-live="polite">Use one URL per addon. Advanced JSON mapping is optional.</p>
+          <p id="missingAddonNotice" class="notice" role="status" hidden><strong>Some addons are not connected.</strong> Their sources will be omitted and shown in the report.</p>
+          <div id="missingMappings"></div>
+          <details><summary>Advanced URL mappings</summary>
+            <label for="addonUrls">Addon URLs (JSON object)</label>
+            <textarea id="addonUrls" rows="5" spellcheck="false" autocomplete="off" placeholder='{"my.addon":"https://your-addon/config/manifest.json"}'></textarea>
+            <p class="hint">Use the exact addon ID from the export as each key.</p>
+          </details>
+        </div>
+
+        <details class="form-section" open>
+          <summary>Compatibility options</summary>
+          <label class="check"><input id="useBridge" type="checkbox" checked>Keep mixed catalogs and genre filters</label>
+          <div id="bridgeOptions">
+            <label for="bridgeUrl">NuvioExporter address reachable from the destination</label>
+            <input id="bridgeUrl" type="url" autocomplete="off" placeholder="http://YOUR-SERVER:7088">
+            <p class="hint">Use a LAN address for another device. Keep this service running and preserve its <code>/data</code> directory.</p>
+          </div>
           <label class="check"><input id="omitEmptyFolders" type="checkbox" checked>Hide folders with no usable sources</label>
-          <p class="hint">Optional-addon-only folders are omitted with a warning. Turn this off to keep their empty tiles.</p>
         </details>
-        <button class="primary" id="convertButton" type="submit">Convert to Fusion <span>→</span></button>
-        <p id="inputStatus" class="hint" aria-live="polite">Choose your export or try a sanitized example.</p>
-        <div class="examples"><span>Examples</span><button type="button" data-preset="nuvio">Nuvio collections</button><button type="button" data-preset="fusion">Fusion widgets</button></div>
-        <p class="hint">The layout stays in memory. Compatibility profiles save private addon URLs in appdata. Keep downloads and appdata private. Example URLs are placeholders and will not serve catalogs.</p>
+
+        <div id="remuxConnection" class="form-section" hidden>
+          <div class="section-title"><span class="step">03</span><div><h2>Remux connection</h2><p>Preview the changes before anything is written.</p></div></div>
+          <label for="remuxUrl">Remux server address</label>
+          <input id="remuxUrl" type="url" autocomplete="off" placeholder="http://YOUR-REMUX-SERVER:3000">
+          <label for="remuxKey">Remux administrator API key</label>
+          <input id="remuxKey" type="password" autocomplete="off" spellcheck="false" placeholder="Create a key in Remux → API Keys">
+          <p class="hint">The key is used for this transfer only and is never saved.</p>
+          <label for="setupName">Setup name</label>
+          <input id="setupName" type="text" value="My Nuvio setup" maxlength="100">
+          <p class="hint">Reuse the name on later imports to update the same collections. Existing collections are never deleted.</p>
+        </div>
+
+        <button class="primary" id="convertButton" type="submit">Convert to Fusion <span aria-hidden="true">→</span></button>
+        <p id="inputStatus" class="hint" aria-live="polite">Choose an export or load an example.</p>
+        <div class="examples"><span>Try an example</span><button type="button" data-preset="nuvio">Nuvio collections</button><button type="button" data-preset="fusion">Fusion widgets</button></div>
+        <p class="privacy-note">Your layout stays in memory. Compatibility profiles store private addon URLs in appdata.</p>
       </form>
-      <section class="panel results" aria-label="Fusion conversion results">
-        <div class="section-title"><span class="step">03</span><h2>Review & export</h2><span id="resultBadge" class="tag">AWAITING INPUT</span></div>
-        <div id="emptyState"><div class="empty-icon"><img src="/static/brand/mark.svg" width="83" height="83" alt=""></div><h3>Your layout, carried across.</h3><p>Collections become Fusion collection widgets. Folder order, covers, shapes and multiple catalog sources stay together.</p><div class="legend"><span>Folders & covers</span><span>Catalog sources</span><span>Addon URLs</span><span>Compatibility report</span></div></div>
+
+      <section class="panel results" aria-label="Transfer results">
+        <div class="panel-heading result-heading"><div><p class="panel-kicker">Transfer review</p><h2>Check the result</h2></div><span id="resultBadge" class="tag">AWAITING INPUT</span></div>
+        <div id="emptyState"><div class="empty-icon"><img src="/static/brand/mark.svg" width="62" height="62" alt=""></div><h3>Nothing to review yet</h3><p>Load a collection export to see the folders, sources and changes that will be carried across.</p></div>
         <div id="results" hidden>
           <div id="stats" class="stats"></div><p id="resultSummary"></p><p id="coverage" class="notice"></p>
-          <div id="bridgeResult" class="notice" hidden><strong>Compatibility addon required</strong><p id="bridgeSummary"></p><label for="bridgeManifest">Private addon manifest URL</label><input id="bridgeManifest" type="text" readonly><p class="hint">This URL is also included in the widget file's required addons. Install it in Fusion if prompted, alongside your original metadata addon. Keep it private. Preserve appdata and the server address across updates.</p></div>
+          <div id="bridgeResult" class="notice" hidden><strong>Compatibility addon required</strong><p id="bridgeSummary"></p><label for="bridgeManifest">Private addon manifest URL</label><input id="bridgeManifest" type="text" readonly><p class="hint">Install it in Fusion alongside your original metadata addon. Keep this URL private.</p></div>
           <div class="downloads"><button id="downloadFusion" type="button" class="primary">Download Fusion widgets</button><button id="downloadReport" type="button">Compatibility report</button></div>
-          <p class="hint">Back up your Fusion widgets and remove earlier Nuvio-imported rows before importing this file once. Fusion appends imports instead of updating rows with the same IDs, so importing over an older conversion leaves old and corrected rows together. Only connected addons are included. Missing addons show warnings; downloads are blocked only when no usable sources or widgets remain.</p>
-          <details open><summary>Warnings & requirements</summary><ul id="warnings"></ul></details>
+          <details open><summary>Warnings &amp; requirements</summary><ul id="warnings"></ul></details>
           <details id="issuesSection" open><summary>Settings that need attention</summary><ul id="issues"></ul></details>
           <div class="filters"><label class="sr-only" for="search">Search sources</label><input id="search" type="search" placeholder="Find a folder, catalog or issue…"><label class="sr-only" for="statusFilter">Filter results</label><select id="statusFilter"><option value="all">All sources</option><option value="preserved">Preserved</option><option value="unsupported">Needs attention</option></select></div>
           <div class="table-wrap"><table><thead><tr><th>Source</th><th>Result</th></tr></thead><tbody id="reportBody"></tbody></table></div>
           <details><summary id="layoutSummary">Widget layout</summary><div id="layoutPreview"></div></details>
         </div>
+        <div id="remuxResults" hidden>
+          <div id="remuxStats" class="stats"></div><p id="remuxSummary" class="notice"></p>
+          <div class="table-wrap"><table><thead><tr><th>Collection</th><th>Planned change</th></tr></thead><tbody id="remuxActions"></tbody></table></div>
+          <details open><summary>Compatibility &amp; requirements</summary><ul id="remuxWarnings"></ul></details>
+          <details><summary>Source results</summary><ul id="remuxSources"></ul></details>
+          <div class="downloads"><button id="importRemux" type="button" class="primary">Import into Remux</button><button id="downloadRemuxReport" type="button">Download import report</button></div>
+          <p class="hint">The import installs or reuses catalog addons, creates or updates this setup, and requests a library refresh.</p><p id="remuxProgress" role="status" aria-live="polite"></p>
+        </div>
         <div id="error" class="error" role="alert" hidden></div>
       </section>
     </div>
-    <footer>Nuvio2Fusion · Independent, open-source collection converter and optional compatibility addon. Not affiliated with Nuvio or Fusion. Player settings, accounts and watch history are not transferred.</footer>
+    <footer>NuvioExporter 3.0 · Open-source Nuvio collection transfer for Fusion and Remux. Not affiliated with Nuvio, Fusion or Remux.</footer>
   </main>
 </body>
 </html>
