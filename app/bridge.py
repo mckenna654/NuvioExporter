@@ -197,7 +197,7 @@ class BridgeService:
                      'extra': [{'name': 'skip', 'isRequired': False}]}
                     for s in profile['sources'] for typ in s.get('outputTypes', MEDIA_TYPES)]
         return {'id': 'dev.nuvio2fusion.' + hashlib.sha256(token.encode()).hexdigest()[:12],
-                'name': 'NuvioExporter compatibility', 'version': '3.0.0',
+                'name': 'NuvioExporter compatibility', 'version': '3.0.1',
                 'description': 'Original catalog queries adapted for Fusion. Keep NuvioExporter and the original addons available.',
                 'resources': ['catalog'], 'types': list(MEDIA_TYPES), 'catalogs': catalogs}
 

@@ -51,3 +51,5 @@ output*.json
 /fusion-widgets*.json
 /fusion-compatibility-report*.json
 /data/
+/work/
+/app/static/_release-source/
