@@ -1,1 +1,1 @@
-"""Nuvio2Fusion — take your collections with you."""
+"""NuvioExporter — move Nuvio collection setups between apps."""
