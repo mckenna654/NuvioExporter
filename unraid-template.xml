@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Container version="2">
-  <Name>Nuvio2Fusion</Name>
-  <Repository>ghcr.io/mckenna654/nuvio2fusion:2.1.1</Repository>
+  <Name>NuvioExporter</Name>
+  <Repository>ghcr.io/mckenna654/nuvio2fusion:3.0.0</Repository>
   <Registry>https://github.com/mckenna654/nuvio2fusion/pkgs/container/nuvio2fusion</Registry>
   <Network>bridge</Network>
   <Shell>sh</Shell>
   <Privileged>false</Privileged>
   <Support>https://github.com/mckenna654/nuvio2fusion/issues</Support>
   <Project>https://github.com/mckenna654/nuvio2fusion</Project>
-  <Overview>Convert Nuvio collections into Fusion widget JSON. Keep folders, covers and connected addon sources; skip optional addons with warnings. Mixed catalogs and separate genre filters use a persistent compatibility addon. Preserve the appdata mapping and keep this container running; no account login or media mounts required. For trusted networks only: the app has no authentication and exported addon URLs may contain private tokens.</Overview>
+  <Overview>Move Nuvio collection setups into Fusion widget JSON or Remux smart collections. Preview catalog mappings, update repeat imports without duplicates and request a Remux library refresh. Mixed catalogs and separate genre filters use a persistent compatibility addon. Preserve the appdata mapping and keep this container running; no account login or media mounts required. For trusted networks only: the app has no authentication and exported addon URLs may contain private tokens.</Overview>
   <Category>MediaApp:Video Tools:Utilities</Category>
   <WebUI>http://[IP]:[PORT:7088]/</WebUI>
-  <TemplateURL>https://raw.githubusercontent.com/mckenna654/nuvio2fusion/v2.1.1/unraid-template.xml</TemplateURL>
-  <Icon>https://raw.githubusercontent.com/mckenna654/nuvio2fusion/v2.1.1/app/static/brand/icon.png</Icon>
+  <TemplateURL>https://raw.githubusercontent.com/mckenna654/nuvio2fusion/v3.0.0/unraid-template.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/mckenna654/nuvio2fusion/v3.0.0/app/static/brand/icon.png</Icon>
   <Config Name="WebUI Port" Target="7088" Default="7088" Mode="tcp" Description="Open http://your-unraid-ip:7088. Change only the host port if it is already used. Keep access on your trusted network." Type="Port" Display="always" Required="true" Mask="false">7088</Config>
   <Config Name="Appdata" Target="/data" Default="/mnt/user/appdata/nuvio2fusion" Mode="rw" Description="Private compatibility profiles. Preserve this directory across updates and keep backups private." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/nuvio2fusion</Config>
 </Container>
