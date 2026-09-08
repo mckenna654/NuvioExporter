@@ -1,6 +1,6 @@
 # Install NuvioExporter on Unraid
 
-Release: **v3.1.1** · Image: **`ghcr.io/mckenna654/nuvioexporter:3.1.1`**
+Release: **v3.2.0** · Image: **`ghcr.io/mckenna654/nuvioexporter:3.2.0`**
 
 The public image supports Linux `amd64` and `arm64`. It runs as UID/GID 10001 after its entrypoint prepares `/data`. NuvioExporter needs no media mount, Docker socket, privileged mode, account, or registry login.
 
@@ -9,28 +9,28 @@ Keep the management page on a trusted network. It has no built-in authentication
 ## Upgrade an existing installation
 
 1. Back up the host folder currently mapped to `/data` while the container is stopped.
-2. Change the image to `ghcr.io/mckenna654/nuvioexporter:3.1.1` and the container name to `NuvioExporter`.
+2. Change the image to `ghcr.io/mckenna654/nuvioexporter:3.2.0` and the container name to `NuvioExporter`.
 3. Keep the existing host appdata folder mapped to `/data`, or rename it to `/mnt/user/appdata/nuvioexporter` while stopped and update the mapping.
-4. Apply the change and open `http://YOUR-UNRAID-IP:7088/api/health`. It should report `NuvioExporter` version `3.1.1` with status `ok`.
+4. Apply the change and open `http://YOUR-UNRAID-IP:7088/api/health`. It should report `NuvioExporter` version `3.2.0` with status `ok`.
 
 Keeping the database preserves compatibility profile tokens. Remux imports made by earlier releases are recognized and migrated to the NuvioExporter marker when the same setup name is imported again. Back up Fusion or Remux before importing any regenerated layout.
 
 ## Install using the XML template
 
-1. Download [`unraid-template.xml`](https://github.com/mckenna654/NuvioExporter/releases/download/v3.1.1/unraid-template.xml).
+1. Download [`unraid-template.xml`](https://github.com/mckenna654/NuvioExporter/releases/download/v3.2.0/unraid-template.xml).
 2. Save it as `/boot/config/plugins/dockerMan/templates-user/my-nuvioexporter.xml`.
 3. Open **Docker → Add Container** and choose **NuvioExporter** from the user templates.
 4. Keep **Network Type** set to **Bridge**, privileged mode off, and container port `7088`. Change only the host port if it conflicts.
 5. Apply the template and enable Auto-Start if desired.
 
-The template pins 3.1.1 and includes the WebUI, icon, support link, port, and appdata mapping.
+The template pins 3.2.0 and includes the WebUI, icon, support link, port, and appdata mapping.
 
 ## Add Container fields
 
 | Field | Value |
 | --- | --- |
 | Name | `NuvioExporter` |
-| Repository | `ghcr.io/mckenna654/nuvioexporter:3.1.1` |
+| Repository | `ghcr.io/mckenna654/nuvioexporter:3.2.0` |
 | Network Type | `Bridge` |
 | Privileged | `Off` |
 | Port | Host `7088` → Container `7088`, TCP |
@@ -42,7 +42,7 @@ The image sets `HOST=0.0.0.0` and `PORT=7088`. `PUID` and `PGID` are not support
 
 ## Docker Compose
 
-Download [`docker-compose.release.yml`](https://github.com/mckenna654/NuvioExporter/releases/download/v3.1.1/docker-compose.release.yml). It binds to localhost by default. Set a trusted LAN address before starting it when another device must reach NuvioExporter:
+Download [`docker-compose.release.yml`](https://github.com/mckenna654/NuvioExporter/releases/download/v3.2.0/docker-compose.release.yml). It binds to localhost by default. Set a trusted LAN address before starting it when another device must reach NuvioExporter:
 
 ```sh
 export NUVIOEXPORTER_BIND_IP=192.168.1.10
@@ -61,7 +61,9 @@ docker compose -f docker-compose.release.yml up -d
 5. For Fusion compatibility feeds, use `http://YOUR-UNRAID-IP:7088`, preserve `/data`, and keep NuvioExporter running. Import the widget JSON, not the separate report.
 6. For Remux, enter its server address, an administrator API key, and a stable setup name. Preview before import. Reusing the name updates the marked setup without deleting unrelated collections.
 
-Never post widget exports, configured addon URLs, Remux API keys, the appdata database, or unsanitized screenshots publicly. Share the [project](https://github.com/mckenna654/NuvioExporter) or [release](https://github.com/mckenna654/NuvioExporter/releases/tag/v3.1.1).
+Remux imports copy Nuvio folder covers, backdrops, and logos into Jellyfin. The first import can take longer while Remux downloads the artwork; unchanged reimports skip it. Nuvio collections become promoted Jellyfin groups, and their folders remain ordered child smart collections. Jellyfin clients choose their own grid or row presentation.
+
+Never post widget exports, configured addon URLs, Remux API keys, the appdata database, or unsanitized screenshots publicly. Share the [project](https://github.com/mckenna654/NuvioExporter) or [release](https://github.com/mckenna654/NuvioExporter/releases/tag/v3.2.0).
 
 ## Updates and troubleshooting
 
@@ -72,6 +74,7 @@ Never post widget exports, configured addon URLs, Remux API keys, the appdata da
 - **LAN addon blocked:** set `NUVIOEXPORTER_ALLOW_PRIVATE_UPSTREAM=1` only for a trusted RFC1918/ULA addon host. Loopback, link-local, cloud metadata, and reserved addresses remain blocked.
 - **Addon missing:** connect its configured manifest URL only if you want its sources. Other connected collections remain exportable.
 - **Catalog no longer advertised:** preview again with the current addon configuration. NuvioExporter keeps the remaining valid sources and omits any folder left without a source rather than creating an empty Remux collection.
+- **Artwork missing:** reimport with the same setup name. Failed image downloads are reported without cancelling the collection import; unchanged successful images are skipped.
 - **Rollback:** restore the appdata backup and select a previous release. Save original exports outside the container.
 
 CI tests Python 3.11 and 3.14, builds both architectures, starts the published image, checks conversion as the non-root user, and confirms compatibility profiles survive container replacement.

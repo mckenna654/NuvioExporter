@@ -12,11 +12,11 @@ import threading
 import time
 import uuid
 from collections import Counter
-from urllib.parse import urlsplit
+from urllib.parse import urlencode, urlsplit
 
 from app import USER_AGENT
 from app.bridge import BridgePlan, canonical, public_base_url
-from app.fusion import FusionConversion, TYPE_ALIASES, manifest_url, string
+from app.fusion import FusionConversion, TYPE_ALIASES, is_web_url, manifest_url, string
 from app.upstream import permitted_ip
 
 
@@ -135,8 +135,8 @@ def plan_setup(export_data, addon_urls, bridge=None):
         seen.add(key)
         return key
 
-    def visual(raw, path):
-        allowed = {'id', 'title', 'folders', 'sources', 'catalogSources'}
+    def visual(raw, path, supported=()):
+        allowed = {'id', 'title', 'folders', 'sources', 'catalogSources', *supported}
         fields = [k for k, v in raw.items() if k not in allowed and v not in (None, '', False, [], {})]
         if fields:
             warnings.append(f'{path}: appearance/settings not transferred: ' + ', '.join(fields) + '.')
@@ -145,16 +145,26 @@ def plan_setup(export_data, addon_urls, bridge=None):
         path = f'collections[{i}]'
         if not isinstance(row, dict) or not isinstance(row.get('folders'), list):
             raise RemuxError('Each Nuvio collection must contain a folders array.')
-        group = {'key': ident(row, path), 'name': string(row.get('title')) or 'Untitled', 'order': i, 'folders': []}
-        visual(row, path)
+        group = {'key': ident(row, path), 'name': string(row.get('title')) or 'Untitled', 'order': i,
+                 'promoted': row.get('pinToTop') is not False, 'folders': []}
+        visual(row, path, {'pinToTop'})
         for j, folder in enumerate(row['folders']):
             fp = f'{path}.folders[{j}]'
             if not isinstance(folder, dict):
                 raise RemuxError('Each folder must be an object.')
             if len(seen) >= 10000:
                 raise RemuxError('The setup exceeds 10,000 collections/folders.')
-            f = {'key': ident(folder, fp, group['key']), 'name': string(folder.get('title')) or 'Untitled', 'order': j, 'sources': []}
-            visual(folder, fp)
+            f = {'key': ident(folder, fp, group['key']), 'name': string(folder.get('title')) or 'Untitled',
+                 'order': j, 'sources': [], 'images': {}}
+            image_fields = {'coverImageUrl': 'Primary', 'heroBackdropUrl': 'Backdrop', 'titleLogoUrl': 'Logo'}
+            for field, kind in image_fields.items():
+                value = string(folder.get(field))
+                if value:
+                    if is_web_url(value):
+                        f['images'][kind] = value
+                    else:
+                        warnings.append(f'{fp}: {field} is not a supported HTTP(S) image URL and was omitted.')
+            visual(folder, fp, image_fields)
             sources = folder.get('sources')
             if sources is None:
                 sources = folder.get('catalogSources', [])
@@ -213,7 +223,7 @@ def plan_setup(export_data, addon_urls, bridge=None):
             groups.append(group)
     bridge_info = bridge.finish() if bridge else None
     counts = Counter(r['status'] for r in records)
-    warnings += ['Remux controls item sorting and artwork. Source interleaving, covers, tile shapes and hidden titles are not copied.',
+    warnings += ['Folder covers, backdrops and logos are copied to Remux. Nuvio tile shapes, hidden titles, focus effects and view modes have no Jellyfin equivalent.',
                  'Items appear after Remux refreshes enabled catalogs, subject to its catalog limits and metadata support.',
                  'Removed or omitted folders from earlier imports are retained in Remux. This importer never deletes your collections.']
     return {'groups': groups, 'bridge': bridge_info, 'report': {'groups': len(groups),
@@ -242,6 +252,10 @@ def marker_aliases(scope, key):
     # Recognize the retired marker so an existing Remux setup is migrated
     # instead of duplicated when it is imported again.
     return marker(scope, key), 'nuvio' + '2fusion:' + scope + ':' + key
+
+
+def image_marker(kind, url):
+    return marker('image', kind.lower() + ':' + digest(url))
 
 
 def match_collection(items, tags):
@@ -409,6 +423,7 @@ class RemuxService:
         if not self.lock.acquire(blocking=False):
             raise RemuxError('Another import is running. Wait for it to finish before previewing again.')
         completed = []
+        image_failures = 0
         try:
             cached = self.plans.pop(token, None)
             if not cached or time.monotonic() - cached['created'] >= 900:
@@ -455,6 +470,7 @@ class RemuxService:
                 raise RemuxError('No source catalogs in this setup are currently advertised by their configured addons.')
 
             def upsert(node, group=False):
+                nonlocal image_failures
                 tag = marker(scope, node['key'])
                 aliases = marker_aliases(scope, node['key'])
                 existing = match_collection(items, aliases)
@@ -470,7 +486,7 @@ class RemuxService:
                     existing = {'Id': item_id, 'Name': tag, 'Tags': []}
                     items.append(existing)
                 patch = {'Name': node['name'], 'CollectionType': 'collections' if group else 'mixed',
-                    'CollectionKind': 'manual' if group else 'smart', 'Promoted': group,
+                    'CollectionKind': 'manual' if group else 'smart', 'Promoted': node.get('promoted', False) if group else False,
                     'SortOrder': node['order'], 'Tags': list(dict.fromkeys([
                         *(t for t in (existing.get('Tags') or []) if t not in aliases), tag]))}
                 if not group:
@@ -482,6 +498,27 @@ class RemuxService:
                         'rules': [{'field': 'catalog', 'op': 'in', 'catalog_ids': list(dict.fromkeys(ids))}]}]}
                 client.request('PATCH', '/items/' + item_id, patch)
                 existing.update(Name=node['name'], Tags=patch['Tags'])
+                synced = 0
+                if not group:
+                    tags = list(patch['Tags'])
+                    for kind, url in node.get('images', {}).items():
+                        image_tag = image_marker(kind, url)
+                        prefix = marker('image', kind.lower() + ':')
+                        if image_tag in tags:
+                            continue
+                        try:
+                            query = urlencode({'Type': kind, 'ImageUrl': url})
+                            client.request('POST', f'/items/{item_id}/remoteimages/download?{query}')
+                        except RemuxError:
+                            image_failures += 1
+                            continue
+                        tags = [t for t in tags if not t.startswith(prefix)]
+                        tags.append(image_tag)
+                        synced += 1
+                    if synced:
+                        client.request('PATCH', '/items/' + item_id, {'Tags': tags})
+                        existing['Tags'] = tags
+                        completed.append(f'Synced {synced} artwork image(s) for {node["name"]}')
                 completed.append(action + node['name'])
                 return item_id
 
@@ -491,8 +528,11 @@ class RemuxService:
                     fid = upsert(folder)
                     client.request('POST', f'/collections/{gid}/items?ids={fid}')
             client.request('POST', '/library/refresh')
+            image_note = (f' {image_failures} artwork image(s) could not be copied; reimport later to retry.'
+                          if image_failures else '')
             return {'success': True, 'completed': completed, 'refreshQueued': True,
-                    'message': 'Setup imported. Remux library refresh was requested; catalogs may take time to populate. Existing playback/metadata addons are still needed.'}
+                    'imageFailures': image_failures,
+                    'message': 'Setup imported. Remux library refresh was requested; catalogs may take time to populate. Existing playback/metadata addons are still needed.' + image_note}
         except RemuxError as exc:
             return {'success': False, 'completed': completed, 'refreshQueued': False,
                     'message': str(exc) + ' Some changes may already have applied. Preview again to reconcile existing collections before retrying.'}

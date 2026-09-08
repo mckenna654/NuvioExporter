@@ -10,7 +10,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 from app.bridge import BridgePlan, ProfileStore
 from app.main import app
-from app.remux import RemuxClient, RemuxError, RemuxService, plan_setup, marker, digest
+from app.remux import RemuxClient, RemuxError, RemuxService, plan_setup, marker, digest, image_marker
 
 
 URL = 'https://catalog.example/private-config/manifest.json?key=SECRET'
@@ -32,6 +32,8 @@ class FakeRemux:
         self.calls = []
         self.enabled = {}
         self.fail_patch = False
+        self.fail_images = set()
+        self.images = []
         self.admin = True
         self.advertised = ['movie:top', 'series:top', 'movie:unrelated']
 
@@ -68,6 +70,15 @@ class FakeRemux:
                 raise RemuxError('Simulated interrupted PATCH')
             item = next(i for i in self.items if i['Id'] == path.split('/')[-1])
             item.update(copy.deepcopy(body))
+            return None
+        if method == 'POST' and '/remoteimages/download?' in path:
+            from urllib.parse import parse_qs, urlsplit
+            item_id = path.split('/')[2]
+            query = parse_qs(urlsplit(path).query)
+            kind, url = query['Type'][0], query['ImageUrl'][0]
+            if kind in self.fail_images:
+                raise RemuxError('Simulated image failure')
+            self.images.append((item_id, kind, url))
             return None
         if path.startswith('/collections/'):
             fid = path.split('ids=')[1]
@@ -121,6 +132,39 @@ class RemuxTests(unittest.TestCase):
         self.assertEqual(len(self.remote.items), 2)
         self.assertEqual(len(self.remote.addons), 1)
         self.assertEqual(self.remote.items[0]['Name'], 'Renamed')
+
+    def test_artwork_and_nuvio_hierarchy_are_preserved_and_idempotent(self):
+        raw = setup_data()
+        raw[0]['pinToTop'] = True
+        folder = raw[0]['folders'][0]
+        folder.update(coverImageUrl='https://art.example/cover.webp',
+                      heroBackdropUrl='https://art.example/backdrop.webp',
+                      titleLogoUrl='https://art.example/logo.webp')
+        preview = self.preview(raw)
+        result = self.service.apply(preview['previewToken'], 'key')
+        self.assertTrue(result['success'], result)
+        group, child = self.remote.items
+        self.assertTrue(group['Promoted'])
+        self.assertFalse(child['Promoted'])
+        self.assertEqual(child['ParentId'], group['Id'])
+        self.assertEqual([kind for _, kind, _ in self.remote.images], ['Primary', 'Backdrop', 'Logo'])
+        for kind, url in [('Primary', folder['coverImageUrl']), ('Backdrop', folder['heroBackdropUrl']),
+                          ('Logo', folder['titleLogoUrl'])]:
+            self.assertIn(image_marker(kind, url), child['Tags'])
+        self.remote.images.clear()
+        again = self.preview(raw)
+        self.assertTrue(self.service.apply(again['previewToken'], 'key')['success'])
+        self.assertFalse(self.remote.images)
+
+    def test_artwork_failure_does_not_block_collection_import(self):
+        raw = setup_data()
+        raw[0]['folders'][0]['coverImageUrl'] = 'https://art.example/cover.webp'
+        self.remote.fail_images.add('Primary')
+        result = self.service.apply(self.preview(raw)['previewToken'], 'key')
+        self.assertTrue(result['success'])
+        self.assertEqual(result['imageFailures'], 1)
+        self.assertIn('reimport later', result['message'])
+        self.assertNotIn(image_marker('Primary', raw[0]['folders'][0]['coverImageUrl']), self.remote.items[1]['Tags'])
 
     def test_retired_markers_are_updated_without_duplicates(self):
         first = self.preview()

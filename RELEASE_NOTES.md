@@ -1,5 +1,20 @@
 # NuvioExporter release notes
 
+## 3.2.0 · 8 September 2026
+
+Carry Nuvio folder artwork into Remux and expose the collection hierarchy in Jellyfin in the same source order.
+
+- Copy each available Nuvio `coverImageUrl`, `heroBackdropUrl`, and `titleLogoUrl` into the matching Remux/Jellyfin Primary, Backdrop, and Logo image slots.
+- Keep Nuvio collections as promoted Jellyfin group containers and their folders as ordered child smart collections.
+- Respect `pinToTop` for group promotion and preserve source group/folder ordering through Remux `SortOrder` values.
+- Store private artwork-version markers on imported collections so unchanged images are skipped on later imports.
+- Continue the import when an individual remote image cannot be fetched and report the failure count for a later retry.
+- Correct the Remux compatibility report so it distinguishes copied artwork from Nuvio-only tile, title, focus, and view-mode presentation.
+
+**Upgrade:** pull `ghcr.io/mckenna654/nuvioexporter:3.2.0`, recreate the container with the existing `/data` mapping, and confirm `/api/health` reports version `3.2.0`. Reimport with the same setup name to update the existing hierarchy and add its artwork without duplicating collections.
+
+**Validation:** 89 automated tests pass. A full two-pass simulation using the supplied Nuvio export and current AIOMetadata manifest creates 12 ordered groups and 138 ordered child collections, copies 414 images on the first import, copies none on the unchanged second import, and leaves no folder ungrouped.
+
 ## 3.1.1 · 8 September 2026
 
 Make Remux imports resilient when a Nuvio export refers to catalogs that have since been removed from an addon's manifest.
