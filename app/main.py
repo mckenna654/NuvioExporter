@@ -102,12 +102,14 @@ class RemuxPreviewRequest(BaseModel):
     server_url: str
     api_key: str = Field(repr=False, min_length=1, max_length=4096)
     setup_name: str = Field(default='My Nuvio setup', min_length=1, max_length=100)
+    wipe_collections: bool = False
 
 
 class RemuxImportRequest(BaseModel):
     model_config = ConfigDict(extra='forbid')
     preview_token: str
     api_key: str = Field(repr=False, min_length=1, max_length=4096)
+    wipe_confirmation: str | None = Field(default=None, max_length=32)
 
 
 @app.post('/api/remux/preview')
@@ -123,7 +125,8 @@ def remux_preview(request: RemuxPreviewRequest, http_request: Request):
 @app.post('/api/remux/import')
 def remux_import(request: RemuxImportRequest, http_request: Request):
     try:
-        return http_request.app.state.remux.apply(request.preview_token, request.api_key)
+        return http_request.app.state.remux.apply(
+            request.preview_token, request.api_key, request.wipe_confirmation)
     except RemuxError as exc:
         raise HTTPException(409, str(exc)) from None
     except (ValueError, TypeError, AttributeError, KeyError, RecursionError):

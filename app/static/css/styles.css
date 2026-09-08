@@ -88,6 +88,10 @@ summary::marker { color: var(--muted); }
 .native { color: #14724f; } .approximate { color: var(--warning); } .dependent { color: #315f9f; } .unsupported { color: var(--danger); }
 #resultSummary { margin: 0 0 14px; color: var(--muted); font-size: 12px; }
 .notice { margin: 12px 0; padding: 11px 12px; border: 1px solid #e8c982; border-radius: 6px; background: var(--warning-bg); color: var(--warning); font-size: 12px; }
+.danger-check { color: var(--danger); font-weight: 700; }
+.danger-notice { margin: 14px 0; padding: 12px; border: 1px solid #f0b4bd; border-radius: 6px; background: var(--danger-bg); color: var(--danger); font-size: 12px; }
+.danger-notice p { margin: 7px 0 10px; }
+.danger-notice label { color: var(--danger); }
 .downloads { display: flex; flex-wrap: wrap; gap: 8px; margin: 17px 0 12px; }
 ul { margin: 9px 0; padding-left: 18px; color: var(--muted); font-size: 11px; }
 li { margin: 6px 0; }

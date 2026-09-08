@@ -25,7 +25,7 @@
 
   <main class="container">
     <section class="intro">
-      <p class="eyebrow">NUVIOEXPORTER · VERSION 3.2.0</p>
+      <p class="eyebrow">NUVIOEXPORTER · VERSION 3.3.0</p>
       <h1>Move your collection setup.</h1>
       <p>Choose where it goes, review what will change, then export to Fusion or send it to Remux.</p>
     </section>
@@ -34,7 +34,7 @@
       <form id="fusionForm" class="panel inputs">
         <div class="panel-heading">
           <div><p class="panel-kicker">Transfer setup</p><h2>Choose a destination</h2></div>
-          <span class="version">3.2.0</span>
+          <span class="version">3.3.0</span>
         </div>
         <label for="destination">Destination</label>
         <select id="destination"><option value="fusion">Fusion · download widget JSON</option><option value="remux">Remux · import through the API</option></select>
@@ -86,7 +86,9 @@
           <p class="hint">The key is used for this transfer only and is never saved.</p>
           <label for="setupName">Setup name</label>
           <input id="setupName" type="text" value="My Nuvio setup" maxlength="100">
-          <p class="hint">Reuse the name on later imports to update the same collections. Existing collections are never deleted.</p>
+          <p class="hint">Reuse the name on later imports to update the same collections.</p>
+          <label class="check danger-check"><input id="wipeCollections" type="checkbox">Wipe the existing Remux collections library before import</label>
+          <p class="hint">Optional and destructive. The preview counts the collections to delete. Media items and addons are left intact.</p>
         </div>
 
         <button class="primary" id="convertButton" type="submit">Convert to Fusion <span aria-hidden="true">→</span></button>
@@ -113,13 +115,19 @@
           <div class="table-wrap"><table><thead><tr><th>Collection</th><th>Planned change</th></tr></thead><tbody id="remuxActions"></tbody></table></div>
           <details open><summary>Compatibility &amp; requirements</summary><ul id="remuxWarnings"></ul></details>
           <details><summary>Source results</summary><ul id="remuxSources"></ul></details>
+          <div id="wipeConfirmation" class="danger-notice" hidden>
+            <strong id="wipeHeading">Collection wipe requested</strong>
+            <p id="wipeDescription"></p>
+            <label for="wipeConfirmationText">Type <code>WIPE COLLECTIONS</code> to enable import</label>
+            <input id="wipeConfirmationText" type="text" autocomplete="off" spellcheck="false">
+          </div>
           <div class="downloads"><button id="importRemux" type="button" class="primary">Import into Remux</button><button id="downloadRemuxReport" type="button">Download import report</button></div>
           <p class="hint">The import installs or reuses catalog addons, creates or updates this setup, and requests a library refresh.</p><p id="remuxProgress" role="status" aria-live="polite"></p>
         </div>
         <div id="error" class="error" role="alert" hidden></div>
       </section>
     </div>
-    <footer>NuvioExporter 3.2.0 · Open-source Nuvio collection transfer for Fusion and Remux. Not affiliated with Nuvio, Fusion or Remux.</footer>
+    <footer>NuvioExporter 3.3.0 · Open-source Nuvio collection transfer for Fusion and Remux. Not affiliated with Nuvio, Fusion or Remux.</footer>
   </main>
 </body>
 </html>

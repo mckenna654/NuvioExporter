@@ -24,6 +24,9 @@ class RemuxError(Exception):
     """Only safe, credential-free messages cross the API boundary."""
 
 
+WIPE_CONFIRMATION = 'WIPE COLLECTIONS'
+
+
 def digest(value):
     return hashlib.sha256(canonical(value).encode()).hexdigest()[:32]
 
@@ -234,7 +237,7 @@ def plan_setup(export_data, addon_urls, bridge=None):
 def get_collections(client):
     items = []
     for start in range(0, 20000, 500):
-        page = client.request('GET', f'/items?includeItemTypes=BoxSet&recursive=true&includeChildless=true&fields=Tags&startIndex={start}&limit=500')
+        page = client.request('GET', f'/items?includeItemTypes=BoxSet&recursive=true&includeChildless=true&fields=Tags,ParentId&startIndex={start}&limit=500')
         if not isinstance(page, dict) or not isinstance(page.get('Items'), list):
             raise RemuxError('Remux did not return a supported collection listing.')
         batch = page['Items']
@@ -281,7 +284,8 @@ class RemuxService:
         self.plans = {}
         self.lock = threading.Lock()
 
-    def preview(self, export_data, addon_urls, bridge_url, server_url, api_key, setup_name):
+    def preview(self, export_data, addon_urls, bridge_url, server_url, api_key, setup_name,
+                wipe_collections=False):
         if not string(setup_name) or len(setup_name) > 100:
             raise RemuxError('Give this setup a name of 1–100 characters. Reuse it for future updates.')
         bridge = BridgePlan(self.store, bridge_url) if bridge_url else None
@@ -309,12 +313,20 @@ class RemuxService:
         actions = []
         for group in plan['groups']:
             for node in [group, *group['folders']]:
-                existing = match_collection(items, marker_aliases(scope, node['key']))
+                existing = None if wipe_collections else match_collection(items, marker_aliases(scope, node['key']))
                 actions.append({'name': node['name'], 'kind': 'group' if node is group else 'collection',
-                                'action': 'update' if existing else 'create'})
+                                'action': 'update' if existing else ('recreate' if wipe_collections else 'create')})
+        wipe_ids = sorted(uuid_text(item.get('Id')) for item in items) if wipe_collections else []
+        wipe = {'enabled': bool(wipe_collections), 'count': len(wipe_ids),
+                'confirmation': WIPE_CONFIRMATION if wipe_collections else None}
+        if wipe_collections:
+            plan['report']['warnings'] = [w for w in plan['report']['warnings']
+                if 'never deletes' not in w.lower()]
+            plan['report']['warnings'].append(
+                f'Destructive mode will permanently delete {len(wipe_ids)} existing Remux collection(s) before rebuilding this setup. Media items and addons are not deleted.')
         public = {'report': plan['report'], 'actions': actions, 'addons': addon_actions,
                   'canImport': bool(plan['groups']), 'usesBridge': bool(plan['bridge']),
-                  'setupName': setup_name, 'serverUrl': client.url}
+                  'setupName': setup_name, 'serverUrl': client.url, 'wipe': wipe}
         # API keys never enter the plan cache or persistent profile database.
         with self.lock:
             now = time.monotonic()
@@ -323,7 +335,8 @@ class RemuxService:
                 raise RemuxError('Too many pending previews. Wait 15 minutes or restart the service.')
             token = secrets.token_urlsafe(24)
             self.plans[token] = {'plan': plan, 'scope': scope, 'url': client.url, 'created': now,
-                                 'userId': user.get('Id'), 'public': public}
+                                 'userId': user.get('Id'), 'public': public,
+                                 'wipeEnabled': bool(wipe_collections), 'wipeIds': wipe_ids}
         return {**public, 'previewToken': token}
 
     @staticmethod
@@ -419,15 +432,18 @@ class RemuxService:
                 f'{len(removed_folders)} folder(s) were omitted because none of their source catalogs are currently advertised: '
                 + ', '.join(removed_folders) + '.')
 
-    def apply(self, token, api_key):
+    def apply(self, token, api_key, wipe_confirmation=None):
         if not self.lock.acquire(blocking=False):
             raise RemuxError('Another import is running. Wait for it to finish before previewing again.')
         completed = []
         image_failures = 0
         try:
-            cached = self.plans.pop(token, None)
+            cached = self.plans.get(token)
             if not cached or time.monotonic() - cached['created'] >= 900:
                 raise RemuxError('This preview expired or was already used. Preview the setup again.')
+            if cached['wipeEnabled'] and wipe_confirmation != WIPE_CONFIRMATION:
+                raise RemuxError(f'Type {WIPE_CONFIRMATION} exactly to authorize deletion of the previewed collections.')
+            self.plans.pop(token, None)
             plan, scope = cached['plan'], cached['scope']
             if not plan['groups']:
                 raise RemuxError('No usable collections to import.')
@@ -468,6 +484,26 @@ class RemuxService:
 
             if not plan['groups']:
                 raise RemuxError('No source catalogs in this setup are currently advertised by their configured addons.')
+
+            if cached['wipeEnabled']:
+                current_ids = sorted(uuid_text(item.get('Id')) for item in items)
+                if current_ids != cached['wipeIds']:
+                    raise RemuxError('The Remux collections library changed after preview. Preview again before wiping it.')
+                by_id = {str(row.get('Id')): row for row in items}
+
+                def collection_depth(item):
+                    depth, parent, seen = 0, item.get('ParentId'), set()
+                    while parent and str(parent) in by_id and str(parent) not in seen:
+                        seen.add(str(parent))
+                        depth += 1
+                        parent = by_id[str(parent)].get('ParentId')
+                    return depth
+
+                for item in sorted(items, key=collection_depth, reverse=True):
+                    item_id = uuid_text(item.get('Id'))
+                    client.request('DELETE', '/items/' + item_id)
+                    completed.append('Deleted ' + (string(item.get('Name')) or 'an existing collection'))
+                items = []
 
             def upsert(node, group=False):
                 nonlocal image_failures
@@ -532,9 +568,13 @@ class RemuxService:
                           if image_failures else '')
             return {'success': True, 'completed': completed, 'refreshQueued': True,
                     'imageFailures': image_failures,
-                    'message': 'Setup imported. Remux library refresh was requested; catalogs may take time to populate. Existing playback/metadata addons are still needed.' + image_note}
+                    'wipedCollections': len(cached['wipeIds']),
+                    'message': ('Existing collections were wiped and the setup was rebuilt. ' if cached['wipeEnabled'] else 'Setup imported. ') +
+                    'Remux library refresh was requested; catalogs may take time to populate. Existing playback/metadata addons are still needed.' + image_note}
         except RemuxError as exc:
+            suffix = (' Some changes may already have applied. Preview again to reconcile existing collections before retrying.'
+                      if completed else ' No collection changes were made.')
             return {'success': False, 'completed': completed, 'refreshQueued': False,
-                    'message': str(exc) + ' Some changes may already have applied. Preview again to reconcile existing collections before retrying.'}
+                    'message': str(exc) + suffix}
         finally:
             self.lock.release()

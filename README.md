@@ -33,14 +33,14 @@ NuvioExporter preserves the layout and references to your original catalog sourc
 - Review every omitted source, missing URL and unmapped visual setting before importing.
 - Download the widget JSON and a separate compatibility report.
 - Preview a Remux transfer before changing the server, install or reuse its Stremio catalog addons, and request a library refresh after import.
-- Update previously imported Remux groups and collections using private import markers; the importer never deletes collections.
+- Update previously imported Remux groups and collections using private import markers, or explicitly wipe and rebuild the complete Remux collections library.
 - Run locally with Python or Docker; conversion makes no outbound catalog or artwork requests.
 
 **This is a collections converter, not a full Nuvio backup converter.** Player settings, credentials, watch history, libraries and home rows absent from the export are not transferred.
 
 ## Quick start
 
-**Installing on Unraid?** Use the [Unraid installation guide](docs/UNRAID.md) and the [v3.2.0 release downloads](https://github.com/mckenna654/NuvioExporter/releases/tag/v3.2.0). The public image is `ghcr.io/mckenna654/nuvioexporter:3.2.0`; no registry login is needed. **Compatibility mode requires an appdata path mapped to `/data`.**
+**Installing on Unraid?** Use the [Unraid installation guide](docs/UNRAID.md) and the [v3.3.0 release downloads](https://github.com/mckenna654/NuvioExporter/releases/tag/v3.3.0). The public image is `ghcr.io/mckenna654/nuvioexporter:3.3.0`; no registry login is needed. **Compatibility mode requires an appdata path mapped to `/data`.**
 
 ### Run with Python
 
@@ -85,7 +85,7 @@ docker run -d \
   --restart unless-stopped \
   -p 127.0.0.1:7088:7088 \
   -v nuvioexporter-data:/data \
-  ghcr.io/mckenna654/nuvioexporter:3.2.0
+  ghcr.io/mckenna654/nuvioexporter:3.3.0
 ```
 
 `latest` follows successful builds of `main`; `sha-<commit>` identifies a particular build. Version tags are generated when a matching `v<version>` Git tag is published. Builds target Linux `amd64` and `arm64`. Check [Actions](https://github.com/mckenna654/NuvioExporter/actions) before assuming a particular image tag exists.
@@ -112,6 +112,8 @@ Jellyfin displays the promoted Nuvio groups as library views and their smart col
 
 Mixed and genre-filtered sources use the optional compatibility addon. Native Nuvio TMDB/Trakt recipes and exact cross-source interleaving are reported as unsupported or approximate; they are never silently rewritten. Existing collections are not deleted, including folders omitted because their addon URL was not supplied or its catalogs are no longer advertised.
 
+Normal imports keep unrelated and omitted collections. To replace the complete Remux collections library, select **Wipe the existing Remux collections library before import** before previewing. The preview reports the exact deletion count and marks every incoming entry as a rebuild. Import stays disabled until you type `WIPE COLLECTIONS`. NuvioExporter checks that the collection IDs are unchanged since preview, deletes child collections before their groups, and then recreates the selected Nuvio setup. This mode deletes collection and group objects only; it does not delete media items, addons, API keys, or other Remux settings. Back up Remux before using it.
+
 For a direct API integration, the app exposes the same two endpoints used by the GUI:
 
 ```sh
@@ -124,7 +126,7 @@ curl --fail-with-body http://127.0.0.1:7088/api/remux/import \
   --data-binary @remux-import.json
 ```
 
-The preview body contains `export_data`, `addon_urls`, `server_url`, `api_key`, `setup_name`, and optionally `bridge_url`. The import body contains the returned `previewToken` and `api_key`. A preview expires after 15 minutes and is single-use. Do not put API keys or configured manifest URLs in a repository, issue, gist or support screenshot.
+The preview body contains `export_data`, `addon_urls`, `server_url`, `api_key`, `setup_name`, optionally `bridge_url`, and optionally `wipe_collections: true`. A wipe preview returns its exact count and confirmation phrase. Its import body must contain the returned `previewToken`, `api_key`, and `wipe_confirmation: "WIPE COLLECTIONS"`. A preview expires after 15 minutes and is single-use after an authorized import starts. Do not put API keys or configured manifest URLs in a repository, issue, gist or support screenshot.
 
 ## Convert a setup to Fusion
 

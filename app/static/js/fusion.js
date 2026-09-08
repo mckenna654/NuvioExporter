@@ -195,7 +195,8 @@ $('fusionForm').addEventListener('submit', async event => {
     if ($('destination').value === 'remux') {
       const data = await api('/api/remux/preview', {export_data: raw, addon_urls: mappings,
         bridge_url: $('useBridge').checked ? bridgeUrl : null, server_url: $('remuxUrl').value.trim(),
-        api_key: $('remuxKey').value.trim(), setup_name: $('setupName').value.trim()});
+        api_key: $('remuxKey').value.trim(), setup_name: $('setupName').value.trim(),
+        wipe_collections: $('wipeCollections').checked});
       if (requestGeneration !== generation) return;
       remuxResult = data;
       renderRemux();
@@ -324,9 +325,19 @@ function renderRemux() {
   }));
   $('remuxWarnings').replaceChildren(...r.warnings.map(w => element('li', w)));
   $('remuxSources').replaceChildren(...r.items.map(s => element('li', `${s.name}: ${s.status} — ${s.reason}`)));
-  $('importRemux').disabled = !remuxResult.canImport;
+  $('wipeConfirmation').hidden = !remuxResult.wipe.enabled;
+  $('wipeConfirmationText').value = '';
+  if (remuxResult.wipe.enabled) {
+    $('wipeDescription').textContent = `${remuxResult.wipe.count} existing collection${remuxResult.wipe.count === 1 ? '' : 's'} will be permanently deleted, then this Nuvio setup will be rebuilt. If the library changes after preview, the import will stop before deleting anything.`;
+  }
+  updateRemuxImportButton();
   $('remuxProgress').textContent = 'Preview complete. No changes have been made to Remux.';
 }
+function updateRemuxImportButton() {
+  const confirmed = !remuxResult?.wipe.enabled || $('wipeConfirmationText').value === remuxResult.wipe.confirmation;
+  $('importRemux').disabled = !remuxResult?.canImport || !confirmed;
+}
+$('wipeConfirmationText').addEventListener('input', updateRemuxImportButton);
 $('importRemux').addEventListener('click', async () => {
   if (importing || !remuxResult?.canImport) return;
   importing = true;
@@ -336,7 +347,8 @@ $('importRemux').addEventListener('click', async () => {
   $('importRemux').disabled = true;
   $('remuxProgress').textContent = 'Importing your setup… Keep this page open. Large setups can take several minutes.';
   try {
-    const outcome = await api('/api/remux/import', {preview_token: token, api_key: $('remuxKey').value.trim()});
+    const outcome = await api('/api/remux/import', {preview_token: token, api_key: $('remuxKey').value.trim(),
+      wipe_confirmation: remuxResult.wipe.enabled ? $('wipeConfirmationText').value : null});
     remuxResult.outcome = outcome;
     remuxResult.canImport = false;
     $('remuxProgress').textContent = outcome.message;
@@ -352,6 +364,6 @@ $('importRemux').addEventListener('click', async () => {
 });
 $('downloadRemuxReport').addEventListener('click', () => {
   if (remuxResult) download({report: remuxResult.report, actions: remuxResult.actions, addons: remuxResult.addons,
-    outcome: remuxResult.outcome}, 'remux-import-report.json');
+    wipe: remuxResult.wipe, outcome: remuxResult.outcome}, 'remux-import-report.json');
 });
 destinationMode();

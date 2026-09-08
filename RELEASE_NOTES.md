@@ -1,5 +1,20 @@
 # NuvioExporter release notes
 
+## 3.3.0 · 8 September 2026
+
+Add an explicit, guarded option to replace the complete Remux collections library with the selected Nuvio setup.
+
+- Keep the existing update-in-place behavior as the default.
+- Show the exact number of existing collection and group objects that a wipe will delete.
+- Require the operator to type `WIPE COLLECTIONS` before enabling the destructive import.
+- Recheck the complete collection ID set at import time and stop before deletion if Remux changed after preview.
+- Validate the administrator and source catalogs first, then delete children before parent groups and rebuild the Nuvio hierarchy.
+- Leave media items, addons, API keys, and other Remux settings untouched.
+
+**Upgrade:** pull `ghcr.io/mckenna654/nuvioexporter:3.3.0`, recreate the container with the existing `/data` mapping, and confirm `/api/health` reports version `3.3.0`. Back up Remux before selecting the new wipe option.
+
+**Validation:** 91 automated application tests pass, including confirmation, changed-since-preview protection, child-first deletion, complete rebuild, addon preservation, and default non-deleting imports. The three socket transport tests also pass when the test process is allowed to bind a loopback port.
+
 ## 3.2.0 · 8 September 2026
 
 Carry Nuvio folder artwork into Remux and expose the collection hierarchy in Jellyfin in the same source order.

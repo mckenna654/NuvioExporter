@@ -71,6 +71,10 @@ class FakeRemux:
             item = next(i for i in self.items if i['Id'] == path.split('/')[-1])
             item.update(copy.deepcopy(body))
             return None
+        if method == 'DELETE' and path.startswith('/items/'):
+            item_id = path.split('/')[-1]
+            self.items = [item for item in self.items if item['Id'] != item_id]
+            return None
         if method == 'POST' and '/remoteimages/download?' in path:
             from urllib.parse import parse_qs, urlsplit
             item_id = path.split('/')[2]
@@ -97,8 +101,9 @@ class RemuxTests(unittest.TestCase):
         self.remote = FakeRemux()
         self.service = RemuxService(self.store, lambda url, key: self.remote)
 
-    def preview(self, raw=None):
-        return self.service.preview(raw or setup_data(), {'original': URL}, None, self.remote.url, 'PRIVATE_API_KEY', 'Living room')
+    def preview(self, raw=None, wipe=False):
+        return self.service.preview(raw or setup_data(), {'original': URL}, None, self.remote.url,
+                                    'PRIVATE_API_KEY', 'Living room', wipe)
 
     def test_preview_is_read_only_and_never_leaks_connections(self):
         result = self.preview()
@@ -279,6 +284,42 @@ class RemuxTests(unittest.TestCase):
         self.assertIn('personal', self.remote.items[0]['Tags'])
         self.assertFalse(any(m == 'POST' and p.endswith('/catalogs') for m, p, b in self.remote.calls))
         self.assertFalse(any(m == 'DELETE' for m, p, b in self.remote.calls))
+
+    def test_wipe_requires_confirmation_then_rebuilds_every_collection(self):
+        first = self.preview()
+        self.assertTrue(self.service.apply(first['previewToken'], 'key')['success'])
+        addon_ids = [addon['id'] for addon in self.remote.addons]
+        child_id = self.remote.items[1]['Id']
+        unrelated_id = str(uuid.uuid4())
+        self.remote.items.append({'Id': unrelated_id, 'Name': 'Old personal collection', 'Tags': []})
+        self.remote.calls.clear()
+
+        preview = self.preview(wipe=True)
+        self.assertEqual(preview['wipe'], {'enabled': True, 'count': 3,
+                                          'confirmation': 'WIPE COLLECTIONS'})
+        self.assertTrue(all(action['action'] == 'recreate' for action in preview['actions']))
+        refused = self.service.apply(preview['previewToken'], 'key', 'wipe collections')
+        self.assertFalse(refused['success'])
+        self.assertIn('No collection changes were made', refused['message'])
+        self.assertFalse(any(method == 'DELETE' for method, _, _ in self.remote.calls))
+
+        result = self.service.apply(preview['previewToken'], 'key', 'WIPE COLLECTIONS')
+        self.assertTrue(result['success'], result)
+        self.assertEqual(result['wipedCollections'], 3)
+        self.assertEqual(len(self.remote.items), 2)
+        self.assertEqual([addon['id'] for addon in self.remote.addons], addon_ids)
+        deletes = [path.split('/')[-1] for method, path, _ in self.remote.calls if method == 'DELETE']
+        self.assertEqual(len(deletes), 3)
+        self.assertEqual(deletes[0], child_id)
+        self.assertNotEqual(deletes[0], unrelated_id)
+
+    def test_wipe_stops_before_delete_if_library_changed_after_preview(self):
+        preview = self.preview(wipe=True)
+        self.remote.items.append({'Id': str(uuid.uuid4()), 'Name': 'Created elsewhere', 'Tags': []})
+        result = self.service.apply(preview['previewToken'], 'key', 'WIPE COLLECTIONS')
+        self.assertFalse(result['success'])
+        self.assertIn('changed after preview', result['message'])
+        self.assertFalse(any(method == 'DELETE' for method, _, _ in self.remote.calls))
 
     def test_preview_expiry_replay_and_wrong_admin(self):
         first = self.preview()
