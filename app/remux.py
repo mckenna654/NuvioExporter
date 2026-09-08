@@ -189,15 +189,18 @@ def plan_setup(export_data, addon_urls, bridge=None):
                     genre = string(genre)
                     if genre.lower() == 'none':
                         genre = ''
+                    record_index = len(records) - 1
                     if typ not in {'movie', 'series'} or genre or '/' in cid:
                         if not bridge:
                             raise ValueError('Enable the compatibility addon to preserve this mixed or genre-filtered query.')
                         feeds = bridge.add(url, typ, cid, genre, string(raw.get('catalogName')) or f['name'],
                                            output_types=(typ,) if typ in {'movie', 'series'} else None)
                         # BridgePlan fills manifest URLs when finish() persists the profile.
-                        f['sources'].extend(feed['payload'] for feed in feeds)
+                        for feed in feeds:
+                            f['sources'].append({**feed['payload'], '_record': record_index})
                     else:
-                        f['sources'].append({'addonId': url, 'catalogId': f'{typ}::{cid}', 'type': typ})
+                        f['sources'].append({'addonId': url, 'catalogId': f'{typ}::{cid}', 'type': typ,
+                                             '_record': record_index})
                     record.update(status='kept', reason='Catalog query preserved; Remux will refresh its contents through the addon.')
                 except ValueError:
                     # URL validators may include input in exceptions; never reflect it.
@@ -278,20 +281,23 @@ class RemuxService:
             raise RemuxError('The server does not expose Remux addon APIs.')
         items = get_collections(client)
         scope = digest(string(setup_name))
-        actions = []
-        for group in plan['groups']:
-            for node in [group, *group['folders']]:
-                existing = match_collection(items, marker_aliases(scope, node['key']))
-                actions.append({'name': node['name'], 'kind': 'group' if node is group else 'collection',
-                                'action': 'update' if existing else 'create'})
         sources = self.sources(plan)
         addon_actions = []
         for url in sources:
             addon = self.find_addon(addons, url)
             if addon:
                 self.check_addon(addon)
-                self.catalogs(client, addon, sources[url])
-            addon_actions.append({'action': 'reuse' if addon else 'install', 'catalogs': len(sources[url])})
+                catalogs, missing = self.catalogs(client, addon, sources[url])
+                self.prune_unavailable(plan, url, missing)
+            remaining = self.sources(plan).get(url, set())
+            if remaining:
+                addon_actions.append({'action': 'reuse' if addon else 'install', 'catalogs': len(remaining)})
+        actions = []
+        for group in plan['groups']:
+            for node in [group, *group['folders']]:
+                existing = match_collection(items, marker_aliases(scope, node['key']))
+                actions.append({'name': node['name'], 'kind': 'group' if node is group else 'collection',
+                                'action': 'update' if existing else 'create'})
         public = {'report': plan['report'], 'actions': actions, 'addons': addon_actions,
                   'canImport': bool(plan['groups']), 'usesBridge': bool(plan['bridge']),
                   'setupName': setup_name, 'serverUrl': client.url}
@@ -343,14 +349,61 @@ class RemuxService:
             raise RemuxError('Remux did not return addon catalogs.')
         index = {r.get('catalogId'): r for r in rows}
         result = {}
+        missing = set()
         for local_id in requested:
             if addon.get('types') and local_id.split(':', 1)[0] not in addon['types']:
                 raise RemuxError('An installed addon excludes a required media type. Update its enabled types in Remux.')
             row = index.get(f'addon:{aid}:{local_id}')
             if not row or not row.get('collectionId'):
-                raise RemuxError('A source catalog is not advertised by its Remux addon. Check the original URL and catalog ID; no substitute will be used.')
+                missing.add(local_id)
+                continue
             result[local_id] = {**row, 'collectionId': uuid_text(row['collectionId'])}
-        return result
+        return result, missing
+
+    @staticmethod
+    def prune_unavailable(plan, addon_url, missing):
+        """Drop only catalogs an installed addon no longer advertises."""
+        if not missing:
+            return
+        removed = 0
+        removed_folders = []
+        kept_groups = []
+        for group in plan['groups']:
+            kept_folders = []
+            for folder in group['folders']:
+                kept_sources = []
+                for source in folder['sources']:
+                    typ, cid = source['catalogId'].split('::', 1)
+                    unavailable = source['addonId'] == addon_url and f'{typ}:{cid}' in missing
+                    if unavailable:
+                        removed += 1
+                        record_index = source.get('_record')
+                        if isinstance(record_index, int) and record_index < len(plan['report']['items']):
+                            plan['report']['items'][record_index].update(
+                                status='omitted',
+                                reason='The configured addon no longer advertises this catalog; no substitute was used.')
+                    else:
+                        kept_sources.append(source)
+                folder['sources'] = kept_sources
+                if kept_sources:
+                    kept_folders.append(folder)
+                else:
+                    removed_folders.append(folder['name'])
+            group['folders'] = kept_folders
+            if kept_folders:
+                kept_groups.append(group)
+        plan['groups'] = kept_groups
+        plan['report']['groups'] = len(kept_groups)
+        plan['report']['folders'] = sum(len(g['folders']) for g in kept_groups)
+        counts = Counter(r['status'] for r in plan['report']['items'])
+        plan['report']['kept'] = counts['kept']
+        plan['report']['omitted'] = counts['omitted']
+        plan['report']['warnings'].append(
+            f'{removed} source catalog reference(s) are no longer advertised by the configured addon and were omitted; no substitute was used.')
+        if removed_folders:
+            plan['report']['warnings'].append(
+                f'{len(removed_folders)} folder(s) were omitted because none of their source catalogs are currently advertised: '
+                + ', '.join(removed_folders) + '.')
 
     def apply(self, token, api_key):
         if not self.lock.acquire(blocking=False):
@@ -380,7 +433,8 @@ class RemuxService:
                     addons.append(addon)
                     completed.append('Installed a catalog addon')
                 self.check_addon(addon)
-                catalogs = self.catalogs(client, addon, requested)
+                catalogs, missing = self.catalogs(client, addon, requested)
+                self.prune_unavailable(plan, url, missing)
                 updates = [{'catalogId': k, 'enabled': True, 'maxItems': r.get('maxItems')}
                            for k, r in catalogs.items() if not r.get('enabled')]
                 if installed:
@@ -396,6 +450,9 @@ class RemuxService:
                     client.request('POST', '/addons/' + uuid_text(addon['id']) + '/catalogs', updates)
                     completed.append('Enabled source catalogs')
                 catalog_map[url] = catalogs
+
+            if not plan['groups']:
+                raise RemuxError('No source catalogs in this setup are currently advertised by their configured addons.')
 
             def upsert(node, group=False):
                 tag = marker(scope, node['key'])

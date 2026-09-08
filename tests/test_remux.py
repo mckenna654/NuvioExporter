@@ -192,14 +192,37 @@ class RemuxTests(unittest.TestCase):
         self.assertEqual(len(rule['catalog_ids']), 2)
         self.assertEqual(rule['op'], 'in')
 
-    def test_matching_addon_disabled_or_missing_catalog_blocks_preview(self):
+    def test_matching_addon_disabled_blocks_preview(self):
         self.remote.addons.append({'id': str(uuid.uuid4()), 'kind': 'stremio', 'config': {'manifest_url': URL}, 'enabled': False, 'resources': ['catalog']})
         with self.assertRaises(RemuxError):
             self.preview()
+
+    def test_unadvertised_catalog_is_omitted_without_blocking_valid_sources(self):
+        self.remote.addons.append({'id': str(uuid.uuid4()), 'kind': 'stremio', 'config': {'manifest_url': URL},
+                                   'enabled': True, 'resources': ['catalog'], 'types': ['movie', 'series']})
+        raw = setup_data()
+        raw[0]['folders'].append({'id': 'stale-only', 'title': 'Stale only', 'sources': [
+            {'addonId': 'original', 'type': 'movie', 'catalogId': 'gone'}]})
+        raw[0]['folders'][0]['sources'].append(
+            {'addonId': 'original', 'type': 'movie', 'catalogId': 'gone'})
+        result = self.preview(raw)
+        self.assertTrue(result['canImport'])
+        self.assertEqual([a['name'] for a in result['actions']], ['Weekend', 'Picks'])
+        self.assertEqual((result['report']['kept'], result['report']['omitted']), (1, 2))
+        self.assertTrue(any('no longer advertised' in w for w in result['report']['warnings']))
+        self.assertTrue(self.service.apply(result['previewToken'], 'key')['success'])
+        rule = self.remote.items[1]['SmartFilter']['groups'][0]['rules'][0]
+        self.assertEqual(len(rule['catalog_ids']), 1)
+
+    def test_all_unadvertised_catalogs_produce_a_safe_empty_preview(self):
+        self.remote.addons.append({'id': str(uuid.uuid4()), 'kind': 'stremio', 'config': {'manifest_url': URL},
+                                   'enabled': True, 'resources': ['catalog'], 'types': ['movie']})
         self.remote.addons[0]['enabled'] = True
         self.remote.advertised = []
-        with self.assertRaises(RemuxError):
-            self.preview()
+        result = self.preview()
+        self.assertFalse(result['canImport'])
+        self.assertFalse(result['actions'])
+        self.assertEqual(result['report']['omitted'], 1)
 
     def test_existing_addon_unrelated_catalogs_and_tags_are_preserved(self):
         first = self.preview()

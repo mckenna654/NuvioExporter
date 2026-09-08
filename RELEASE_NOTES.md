@@ -1,5 +1,19 @@
 # NuvioExporter release notes
 
+## 3.1.1 · 8 September 2026
+
+Make Remux imports resilient when a Nuvio export refers to catalogs that have since been removed from an addon's manifest.
+
+- Keep every source catalog that the configured Remux addon still advertises instead of aborting the whole preview at the first stale reference.
+- Report unavailable catalog references without substituting a different catalog or provider.
+- Omit a folder when all of its sources are unavailable, preventing empty Remux smart collections.
+- Preserve valid sources in partially affected folders and continue to use Remux's catalog collection UUIDs.
+- Validate the change against the supplied Nuvio export and its current AIOMetadata manifest: 12 groups, 138 usable folders, 293 catalog links, and no empty smart collections.
+
+**Upgrade:** pull `ghcr.io/mckenna654/nuvioexporter:3.1.1`, recreate the container with the existing `/data` mapping, and confirm `/api/health` reports version `3.1.1`. Preview the Remux import again before applying it.
+
+**Validation:** 87 automated tests pass on the complete application and transport suite. A full simulated Remux import of the supplied export creates 150 grouped collection objects and queues a library refresh without creating any source-less smart collection.
+
 ## 3.1.0 · 8 September 2026
 
 Complete the NuvioExporter identity across the application and its install path. The public container is now `ghcr.io/mckenna654/nuvioexporter`, matching the repository, interface, documentation, Compose service, Unraid template, runtime user, and configuration variables.

@@ -71,7 +71,7 @@ class BridgeTests(unittest.TestCase):
         service, token, cid = self.profile()
         original_manifest = service.manifest(token)
         self.assertTrue(original_manifest['id'].startswith('dev.nuvioexporter.'))
-        self.assertEqual(original_manifest['version'], '3.1.0')
+        self.assertEqual(original_manifest['version'], '3.1.1')
         reloaded = BridgeService(ProfileStore(self.temp.name), lambda _: {'metas': []})
         self.assertEqual(reloaded.manifest(token), original_manifest)
         self.assertEqual(reloaded.catalog(token, 'movie', cid), {'metas': []})

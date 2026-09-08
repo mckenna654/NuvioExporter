@@ -40,7 +40,7 @@ NuvioExporter preserves the layout and references to your original catalog sourc
 
 ## Quick start
 
-**Installing on Unraid?** Use the [Unraid installation guide](docs/UNRAID.md) and the [v3.1.0 release downloads](https://github.com/mckenna654/NuvioExporter/releases/tag/v3.1.0). The public image is `ghcr.io/mckenna654/nuvioexporter:3.1.0`; no registry login is needed. **Compatibility mode requires an appdata path mapped to `/data`.**
+**Installing on Unraid?** Use the [Unraid installation guide](docs/UNRAID.md) and the [v3.1.1 release downloads](https://github.com/mckenna654/NuvioExporter/releases/tag/v3.1.1). The public image is `ghcr.io/mckenna654/nuvioexporter:3.1.1`; no registry login is needed. **Compatibility mode requires an appdata path mapped to `/data`.**
 
 ### Run with Python
 
@@ -85,7 +85,7 @@ docker run -d \
   --restart unless-stopped \
   -p 127.0.0.1:7088:7088 \
   -v nuvioexporter-data:/data \
-  ghcr.io/mckenna654/nuvioexporter:3.1.0
+  ghcr.io/mckenna654/nuvioexporter:3.1.1
 ```
 
 `latest` follows successful builds of `main`; `sha-<commit>` identifies a particular build. Version tags are generated when a matching `v<version>` Git tag is published. Builds target Linux `amd64` and `arm64`. Check [Actions](https://github.com/mckenna654/NuvioExporter/actions) before assuming a particular image tag exists.
@@ -104,7 +104,9 @@ NuvioExporter checks the Remux administrator session, installed Stremio addons a
 4. Applies the original order and a private `nuvioexporter:<setup>:<entry>` marker. Reusing the same setup name updates those entries instead of creating duplicates. Version 3.1.0 also recognizes and migrates markers created by earlier releases.
 5. Requests `POST /library/refresh` so Remux can populate the collections.
 
-Mixed and genre-filtered sources use the optional compatibility addon. Covers, tile shapes, hidden titles, native Nuvio TMDB/Trakt recipes and exact cross-source interleaving are reported as unsupported or approximate; they are never silently rewritten. Existing collections are not deleted, including folders omitted because their addon URL was not supplied.
+If a Nuvio export contains a catalog that its configured addon no longer advertises, the preview reports and omits that source without choosing a substitute. Other sources in the folder remain active. A folder is omitted when none of its sources remain, so the importer does not create an empty smart collection.
+
+Mixed and genre-filtered sources use the optional compatibility addon. Covers, tile shapes, hidden titles, native Nuvio TMDB/Trakt recipes and exact cross-source interleaving are reported as unsupported or approximate; they are never silently rewritten. Existing collections are not deleted, including folders omitted because their addon URL was not supplied or its catalogs are no longer advertised.
 
 For a direct API integration, the app exposes the same two endpoints used by the GUI:
 
